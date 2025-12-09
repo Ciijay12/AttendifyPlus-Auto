@@ -531,11 +531,48 @@ fun AddEditTeacherSheet(
             Text("Adviser", modifier = Modifier.clickable { role = "adviser" }, color = MaterialTheme.colors.onSurface)
         }
 
+        if (role == "adviser") {
+            Spacer(Modifier.height(24.dp))
+            Text("Advisory Class Details", style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colors.onSurface))
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = advisoryGrade,
+                    onValueChange = { 
+                        advisoryGrade = it
+                        isError = false 
+                    },
+                    label = { Text("Grade Level") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    isError = isError && advisoryGrade.isBlank(),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = MaterialTheme.colors.onSurface)
+                )
+                OutlinedTextField(
+                    value = advisorySection,
+                    onValueChange = { 
+                        advisorySection = it
+                        isError = false 
+                    },
+                    label = { Text("Section") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    isError = isError && advisorySection.isBlank(),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(textColor = MaterialTheme.colors.onSurface)
+                )
+            }
+        }
+
         Spacer(Modifier.height(32.dp))
         
         if (isError) {
+             val errorMsg = if (role == "adviser" && (advisoryGrade.isBlank() || advisorySection.isBlank())) 
+                "Please fill in Grade and Section for Adviser role." 
+            else 
+                "Please fill in all required fields (Username, Name)."
+            
             Text(
-                text = "Please fill in all required fields (Username, Name).",
+                text = errorMsg,
                 color = MaterialTheme.colors.error,
                 style = MaterialTheme.typography.body2,
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -544,7 +581,8 @@ fun AddEditTeacherSheet(
         
         Button(
             onClick = {
-                if (teacherId.isNotBlank() && username.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank()) {
+                val isAdviserInfoMissing = role == "adviser" && (advisoryGrade.isBlank() || advisorySection.isBlank())
+                if (teacherId.isNotBlank() && username.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank() && !isAdviserInfoMissing) {
                     onSave(
                         TeacherEntity(
                             id = teacherId,

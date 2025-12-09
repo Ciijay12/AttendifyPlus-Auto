@@ -100,10 +100,7 @@ fun AdminDashboardScreen(
                         DashboardScreen(
                             navController = navController,
                             role = role,
-                            onTeachers = { selectedTab = 1 },
-                            onManageClasses = { selectedTab = 3 },
-                            onAdvisoryDetails = { },
-                            onClassDashboard = { _,_,_ -> }
+                            onTeachers = { selectedTab = 1 }
                         )
                     }
                 }

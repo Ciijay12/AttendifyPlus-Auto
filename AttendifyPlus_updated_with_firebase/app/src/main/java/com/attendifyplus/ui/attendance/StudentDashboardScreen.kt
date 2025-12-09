@@ -29,7 +29,7 @@ import com.attendifyplus.ui.components.InformationBoardCard
 import com.attendifyplus.ui.theme.DeepPurple
 import com.attendifyplus.ui.theme.PrimaryBlue
 import com.attendifyplus.ui.theme.RoyalIndigo
-import com.attendifyplus.utils.QrCodeGenerator
+import com.attendifyplus.util.QRGenerator
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.getViewModel
 import java.time.LocalDate
@@ -81,7 +81,7 @@ fun StudentDashboardScreen(
             while (true) {
                 val timestamp = System.currentTimeMillis()
                 val data = "$studentId|$timestamp"
-                qrCodeBitmap = QrCodeGenerator.generate(data)
+                qrCodeBitmap = QRGenerator.generate(data)
                 delay(15000) // Regenerate every 15 seconds
             }
         }

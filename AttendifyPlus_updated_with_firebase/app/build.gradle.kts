@@ -39,7 +39,12 @@ android {
     }
     composeOptions { kotlinCompilerExtensionVersion = "1.5.3" }
     kotlinOptions { jvmTarget = "1.8" }
-    packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+    packaging {
+        resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 repositories { google(); mavenCentral() }
@@ -47,17 +52,19 @@ repositories { google(); mavenCentral() }
 dependencies {
     implementation("androidx.core:core-ktx:1.10.1")
     implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("androidx.compose.ui:ui:1.5.0")
-    implementation("androidx.compose.material:material:1.5.0")
-    implementation("androidx.compose.material:material-icons-extended:1.5.0")
+
+    // Compose BOM
+    implementation(platform("androidx.compose:compose-bom:2023.08.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material:material")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.runtime:runtime-livedata")
+
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
     implementation("androidx.activity:activity-compose:1.8.0")
     
     // Explicitly add Navigation Compose with animation support
     implementation("androidx.navigation:navigation-compose:2.7.6")
-
-    // Compose LiveData integration
-    implementation("androidx.compose.runtime:runtime-livedata:1.5.0")
     
     // Print Helper
     implementation("androidx.print:print:1.0.0")

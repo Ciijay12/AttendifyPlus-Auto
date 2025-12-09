@@ -13,9 +13,6 @@ fun DashboardScreen(
     navController: NavController,
     role: String,
     onTeachers: () -> Unit,
-    onManageClasses: () -> Unit,
-    onAdvisoryDetails: () -> Unit,
-    onClassDashboard: (String, String, String) -> Unit,
     userName: String = "" // Added optional userName parameter
 ) {
     when (role) {
@@ -29,8 +26,7 @@ fun DashboardScreen(
         )
         "admin" -> AdminDashboard(
             navController = navController,
-            onTeachers = onTeachers,
-            onConfig = onManageClasses
+            onTeachers = onTeachers
         )
         else -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

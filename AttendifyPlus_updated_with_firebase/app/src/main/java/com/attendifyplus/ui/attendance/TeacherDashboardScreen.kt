@@ -141,14 +141,6 @@ fun TeacherDashboardScreen(
                             navController = navController,
                             role = "teacher", // Fixed role for TeacherDashboardScreen
                             onTeachers = { /* Teachers don't manage teachers */ },
-                            onManageClasses = { navController.navigate("manage_classes") },
-                            onAdvisoryDetails = { showAdvisoryDialog = true },
-                            onClassDashboard = { subject, grade, section ->
-                                val encSubject = URLEncoder.encode(subject, "UTF-8")
-                                val encGrade = URLEncoder.encode(grade, "UTF-8")
-                                val encSection = URLEncoder.encode(section, "UTF-8")
-                                navController.navigate("class_dashboard/$encSubject/$encGrade/$encSection")
-                            },
                             // Pass user name for personalized greeting
                             userName = userName 
                         )

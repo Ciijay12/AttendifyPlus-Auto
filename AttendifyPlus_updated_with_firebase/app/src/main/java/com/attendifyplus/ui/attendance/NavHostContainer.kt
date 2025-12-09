@@ -185,6 +185,18 @@ fun NavHostContainer(viewModel: LoginViewModel = getViewModel()) {
             AdminGradeDetailScreen(navController = nav, grade = grade)
         }
 
+        composable(
+            "admin_advisory_detail/{grade}/{section}",
+            arguments = listOf(
+                navArgument("grade") { type = NavType.StringType },
+                navArgument("section") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val grade = backStackEntry.arguments?.getString("grade") ?: ""
+            val section = backStackEntry.arguments?.getString("section") ?: ""
+            AdminAdvisoryDetailScreen(navController = nav, grade = grade, section = section)
+        }
+
         composable("admin_subject_management") {
             AdminSubjectManagementScreen(navController = nav)
         }

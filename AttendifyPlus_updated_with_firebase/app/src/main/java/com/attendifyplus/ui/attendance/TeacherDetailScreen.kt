@@ -1,5 +1,7 @@
 package com.attendifyplus.ui.attendance
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
@@ -353,33 +356,115 @@ fun ResetPasswordDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
 fun AdvisoryDialog(initialGrade: String, initialSection: String, onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
     var g by remember { mutableStateOf(initialGrade) }
     var s by remember { mutableStateOf(initialSection) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.padding(16.dp), backgroundColor = MaterialTheme.colors.surface) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            elevation = 24.dp,
+            backgroundColor = MaterialTheme.colors.surface
+        ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Assign Advisory Class", style = MaterialTheme.typography.h6, color = MaterialTheme.colors.onSurface)
+                // Header with Icon
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(PrimaryBlue.copy(alpha = 0.1f), androidx.compose.foundation.shape.CircleShape)
+                        .align(Alignment.CenterHorizontally),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.School, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(24.dp))
+                }
+                
                 Spacer(Modifier.height(16.dp))
+                
+                Text(
+                    text = "Advisory Class Assignment",
+                    style = MaterialTheme.typography.h6.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colors.onSurface,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+                
+                Text(
+                    text = "Assign a designated class for this teacher to manage and advise.",
+                    style = MaterialTheme.typography.caption.copy(textAlign = TextAlign.Center),
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp, bottom = 24.dp)
+                )
+
+                // Grade Level Input
+                Text("Grade Level", style = MaterialTheme.typography.caption, color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(4.dp))
                 OutlinedTextField(
                     value = g, 
-                    onValueChange = { g = it }, 
-                    label = { Text("Grade Level") }, 
+                    onValueChange = { g = it; error = null }, 
+                    placeholder = { Text("e.g. Grade 10") },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
                     colors = TextFieldDefaults.outlinedTextFieldColors(
-                        textColor = MaterialTheme.colors.onSurface
-                    )
+                        textColor = MaterialTheme.colors.onSurface,
+                        focusedBorderColor = PrimaryBlue,
+                        unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
+                        backgroundColor = MaterialTheme.colors.background
+                    ),
+                    singleLine = true
                 )
-                Spacer(Modifier.height(8.dp))
+                
+                Spacer(Modifier.height(16.dp))
+                
+                // Section Input
+                Text("Section Name", style = MaterialTheme.typography.caption, color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(4.dp))
                 OutlinedTextField(
                     value = s, 
-                    onValueChange = { s = it }, 
-                    label = { Text("Section") }, 
+                    onValueChange = { s = it; error = null }, 
+                    placeholder = { Text("e.g. Newton") },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                        textColor = MaterialTheme.colors.onSurface
-                    )
+                    shape = RoundedCornerShape(12.dp),
+                     colors = TextFieldDefaults.outlinedTextFieldColors(
+                        textColor = MaterialTheme.colors.onSurface,
+                        focusedBorderColor = PrimaryBlue,
+                        unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
+                        backgroundColor = MaterialTheme.colors.background
+                    ),
+                    singleLine = true
                 )
-                Spacer(Modifier.height(16.dp))
-                Button(onClick = { onSave(g, s) }, modifier = Modifier.fillMaxWidth()) { Text("Save") }
+
+                if (error != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(error!!, color = Color.Red, style = MaterialTheme.typography.caption)
+                }
+
+                Spacer(Modifier.height(24.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = PillShape,
+                        border = BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.1f))
+                    ) {
+                        Text("Cancel", color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f))
+                    }
+                    
+                    Spacer(Modifier.width(12.dp))
+                    
+                    Button(
+                        onClick = { 
+                            if (g.isBlank() || s.isBlank()) {
+                                error = "Both Grade and Section are required."
+                            } else {
+                                onSave(g, s)
+                            }
+                        },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = PillShape,
+                        colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue)
+                    ) {
+                        Text("Assign Class", color = Color.White)
+                    }
+                }
             }
         }
     }

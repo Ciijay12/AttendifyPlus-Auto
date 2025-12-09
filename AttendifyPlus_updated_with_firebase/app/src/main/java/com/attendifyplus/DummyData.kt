@@ -1,4 +1,3 @@
 package com.attendifyplus
 
-// DummyData functionality has been removed.
-// This file can be safely deleted.
+// File content removed as part of cleanup.

@@ -14,7 +14,7 @@ import com.attendifyplus.data.repositories.AdminSubjectRepository
 import com.attendifyplus.data.repositories.SyncRepository
 import com.attendifyplus.ui.attendance.*
 import com.attendifyplus.ui.settings.DebugSettingsViewModel
-import com.attendifyplus.utils.NotificationHelper
+import com.attendifyplus.util.NotificationHelper
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
@@ -55,7 +55,7 @@ val appModule = module {
     viewModel { StudentHistoryViewModel(get()) }
     // Updated to inject context for Session Management
     viewModel { LoginViewModel(get(), get(), androidContext()) }
-    viewModel { SubjectClassViewModel(get(), get()) } // Updated to inject TeacherRepository
+    viewModel { SubjectClassViewModel(get(), get(), androidContext()) } // Updated to inject TeacherRepository and Context
     viewModel { AdvisoryDetailsViewModel(get()) }
     viewModel { ClassDashboardViewModel(get(), get()) }
     viewModel { TeacherListViewModel(get(), get()) } // Injecting StudentRepository as well

@@ -1,5 +1,6 @@
 package com.attendifyplus.ui.attendance
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.attendifyplus.data.local.entities.SubjectClassEntity
@@ -20,8 +21,12 @@ data class ClassSectionOption(
 class SubjectClassViewModel(
     private val repository: SubjectClassRepository,
     private val teacherRepository: TeacherRepository,
-    private val teacherId: String = "T001" // In real app, get from session
+    private val context: Context // Added context for session access
 ) : ViewModel() {
+
+    // Read teacherId from session
+    private val prefs = context.getSharedPreferences("attendify_session", Context.MODE_PRIVATE)
+    private val teacherId: String = prefs.getString("user_id", null) ?: ""
 
     val classes: StateFlow<List<SubjectClassEntity>> = repository.getClassesForTeacher(teacherId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -38,6 +43,7 @@ class SubjectClassViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun addClass(subject: String, grade: String, section: String, startTime: String?, endTime: String?, trackAndStrand: String?) {
+        if (teacherId.isBlank()) return // Safety check
         viewModelScope.launch {
             val classEntity = SubjectClassEntity(
                 teacherId = teacherId,
@@ -53,6 +59,7 @@ class SubjectClassViewModel(
     }
 
     fun updateClass(id: Long, subject: String, grade: String, section: String, startTime: String?, endTime: String?, trackAndStrand: String?) {
+        if (teacherId.isBlank()) return // Safety check
         viewModelScope.launch {
             val classEntity = SubjectClassEntity(
                 id = id,

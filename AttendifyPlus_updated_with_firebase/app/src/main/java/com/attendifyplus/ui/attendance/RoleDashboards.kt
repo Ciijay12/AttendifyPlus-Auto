@@ -38,7 +38,7 @@ import com.attendifyplus.ui.theme.PrimaryBlue
 import com.attendifyplus.ui.theme.RoyalIndigo
 import com.attendifyplus.ui.theme.SecondaryTeal
 import com.attendifyplus.ui.theme.SuccessGreen
-import com.attendifyplus.utils.QrCodeGenerator
+import com.attendifyplus.util.QRGenerator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import org.koin.androidx.compose.getViewModel
@@ -83,7 +83,7 @@ fun TeacherDashboard(
             while (isActive) {
                 val timestamp = System.currentTimeMillis()
                 val data = "${selectedStudent!!.id}|$timestamp"
-                qrCodeBitmap = QrCodeGenerator.generate(data)
+                qrCodeBitmap = QRGenerator.generate(data)
                 delay(15000) // Regenerate every 15 seconds
             }
         }
@@ -570,7 +570,7 @@ fun GenerateQrCodeDialog(
 fun AdminDashboard(
     navController: NavController,
     onTeachers: () -> Unit,
-    onConfig: () -> Unit,
+    // onConfig removed or handled internally if not needed
     viewModel: AdminDashboardViewModel = getViewModel()
 ) {
     val dailyStatus by viewModel.dailyStatus.collectAsState()

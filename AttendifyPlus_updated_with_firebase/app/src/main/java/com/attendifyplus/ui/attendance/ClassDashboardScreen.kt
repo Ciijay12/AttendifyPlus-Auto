@@ -33,8 +33,8 @@ import com.attendifyplus.ui.theme.PrimaryBlue
 import com.attendifyplus.ui.theme.SecondaryTeal
 import com.attendifyplus.ui.theme.SuccessGreen
 import com.attendifyplus.ui.theme.WarningYellow
-import com.attendifyplus.utils.PrintUtils
-import com.attendifyplus.utils.QrUtils
+import com.attendifyplus.util.PrintUtils
+import com.attendifyplus.util.QRGenerator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -194,7 +194,7 @@ fun ClassDashboardScreen(
                     Spacer(Modifier.height(24.dp))
                     
                     val payload = JSONObject().put("t", "student").put("i", id).toString()
-                    val bitmap = QrUtils.generateQr(payload)
+                    val bitmap = QRGenerator.generate(payload)
                     if (bitmap != null) {
                         Image(
                             bitmap = bitmap.asImageBitmap(),

@@ -6,7 +6,7 @@ import com.attendifyplus.data.local.entities.SchoolEventEntity
 import com.attendifyplus.data.local.entities.SchoolPeriodEntity
 import com.attendifyplus.data.repositories.SchoolEventRepository
 import com.attendifyplus.data.repositories.SchoolPeriodRepository
-import com.attendifyplus.utils.NotificationHelper
+import com.attendifyplus.util.NotificationHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

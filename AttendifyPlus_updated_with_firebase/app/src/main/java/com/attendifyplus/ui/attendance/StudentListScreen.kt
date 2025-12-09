@@ -28,8 +28,8 @@ import com.attendifyplus.data.local.entities.StudentEntity
 import com.attendifyplus.ui.theme.PillShape
 import com.attendifyplus.ui.theme.PrimaryBlue
 import com.attendifyplus.ui.theme.SecondaryTeal
-import com.attendifyplus.utils.PrintUtils
-import com.attendifyplus.utils.QrUtils
+import com.attendifyplus.util.PrintUtils
+import com.attendifyplus.util.QRGenerator
 import org.json.JSONObject
 import org.koin.androidx.compose.getViewModel
 import kotlinx.coroutines.launch
@@ -432,7 +432,7 @@ fun StudentListScreen(
                             
                             // Generate QR
                             val payload = JSONObject().put("t", "student").put("i", student.id).toString()
-                            val bitmap = QrUtils.generateQr(payload)
+                            val bitmap = QRGenerator.generate(payload)
                             
                             if (bitmap != null) {
                                 Image(

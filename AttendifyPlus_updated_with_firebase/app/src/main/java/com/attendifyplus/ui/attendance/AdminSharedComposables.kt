@@ -317,23 +317,27 @@ fun AddStudentPremiumDialog(
     onDismiss: () -> Unit,
     onSave: (String, String, String, AdvisoryClassOption) -> Unit,
     onGenerateId: () -> String,
-    initialStudent: StudentEntity? = null // Add parameter for editing
+    initialStudent: StudentEntity? = null,
+    forcedAdvisoryClass: AdvisoryClassOption? = null
 ) {
     var firstName by remember { mutableStateOf(initialStudent?.firstName ?: "") }
     var lastName by remember { mutableStateOf(initialStudent?.lastName ?: "") }
     var studentId by remember { mutableStateOf(initialStudent?.id ?: onGenerateId()) }
     
-    // Pre-select advisory class if editing
+    // Pre-select advisory class logic
     var selectedAdvisory by remember { 
         mutableStateOf(
-            if (initialStudent != null) {
+            if (forcedAdvisoryClass != null) forcedAdvisoryClass
+            else if (initialStudent != null) {
                 advisoryClasses.find { it.grade == initialStudent.grade && it.section == initialStudent.section }
+            } else if (advisoryClasses.size == 1) {
+                advisoryClasses.first()
             } else null
         ) 
     }
     var expanded by remember { mutableStateOf(false) }
 
-    val isSetupRequired = advisoryClasses.isEmpty()
+    val isSetupRequired = advisoryClasses.isEmpty() && forcedAdvisoryClass == null
     val isEditing = initialStudent != null
 
     Dialog(onDismissRequest = onDismiss) {
@@ -391,36 +395,55 @@ fun AddStudentPremiumDialog(
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
                     }
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                    
+                    if (forcedAdvisoryClass != null || advisoryClasses.size == 1) {
+                        // Read-only Text Field for single/forced class
                         OutlinedTextField(
                             value = selectedAdvisory?.toString() ?: "",
                             onValueChange = {},
                             readOnly = true,
-                            placeholder = { Text("Select Class", color = MaterialTheme.colors.onSurface.copy(alpha = 0.5f)) },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            enabled = false, // Visual cue
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = TextFieldDefaults.outlinedTextFieldColors(
-                                focusedBorderColor = PrimaryBlue,
-                                unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
-                                backgroundColor = MaterialTheme.colors.surface,
-                                textColor = MaterialTheme.colors.onSurface
+                                disabledTextColor = MaterialTheme.colors.onSurface,
+                                disabledBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
+                                backgroundColor = MaterialTheme.colors.surface
                             )
                         )
-                        ExposedDropdownMenu(
+                    } else {
+                        // Dropdown
+                        ExposedDropdownMenuBox(
                             expanded = expanded,
-                            onDismissRequest = { expanded = false }
+                            onExpandedChange = { expanded = !expanded },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            advisoryClasses.forEach { option ->
-                                DropdownMenuItem(onClick = {
-                                    selectedAdvisory = option
-                                    expanded = false
-                                }) {
-                                    Text(option.toString())
+                            OutlinedTextField(
+                                value = selectedAdvisory?.toString() ?: "",
+                                onValueChange = {},
+                                readOnly = true,
+                                placeholder = { Text("Select Class", color = MaterialTheme.colors.onSurface.copy(alpha = 0.5f)) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(
+                                    focusedBorderColor = PrimaryBlue,
+                                    unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
+                                    backgroundColor = MaterialTheme.colors.surface,
+                                    textColor = MaterialTheme.colors.onSurface
+                                )
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                advisoryClasses.forEach { option ->
+                                    DropdownMenuItem(onClick = {
+                                        selectedAdvisory = option
+                                        expanded = false
+                                    }) {
+                                        Text(option.toString())
+                                    }
                                 }
                             }
                         }

@@ -10,7 +10,7 @@ import com.attendifyplus.data.local.entities.StudentEntity
 import com.attendifyplus.data.repositories.AttendanceRepository
 import com.attendifyplus.data.repositories.SchoolPeriodRepository
 import com.attendifyplus.data.repositories.StudentRepository
-import com.attendifyplus.utils.NotificationHelper
+import com.attendifyplus.util.NotificationHelper
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
