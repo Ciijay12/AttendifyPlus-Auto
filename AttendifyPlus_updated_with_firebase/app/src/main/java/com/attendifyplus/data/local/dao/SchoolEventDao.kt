@@ -29,4 +29,7 @@ interface SchoolEventDao {
     
     @Query("SELECT COUNT(*) FROM school_events WHERE date = :date AND isNoClass = 1")
     suspend fun isNoClassDay(date: Long): Int
+
+    @Query("DELETE FROM school_events")
+    suspend fun deleteAll()
 }

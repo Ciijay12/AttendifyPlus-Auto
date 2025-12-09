@@ -14,6 +14,8 @@ class SchoolEventRepository(private val dao: SchoolEventDao) {
     
     suspend fun deleteEvent(id: Int) = dao.delete(id)
     
+    suspend fun deleteAllEvents() = dao.deleteAll()
+
     suspend fun isNoClass(timestamp: Long): Boolean {
         // Check strictly for that day
         return dao.isNoClassDay(timestamp) > 0

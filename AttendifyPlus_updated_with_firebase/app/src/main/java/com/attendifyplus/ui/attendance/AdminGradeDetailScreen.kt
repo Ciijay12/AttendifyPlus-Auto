@@ -38,7 +38,7 @@ fun AdminGradeDetailScreen(
     viewModel: AdminStudentManagementViewModel = getViewModel()
 ) {
     SetSystemBarIcons(useDarkIcons = true)
-    val context = LocalContext.current
+    // val context = LocalContext.current // Removed unused variable
 
     val students by viewModel.filteredStudents.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()

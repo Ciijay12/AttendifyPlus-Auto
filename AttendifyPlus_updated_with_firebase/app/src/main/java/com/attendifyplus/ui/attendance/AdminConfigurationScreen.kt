@@ -99,7 +99,7 @@ fun AdminConfigurationScreen(
             }
             item {
                 ConfigOptionCardPremium(
-                    title = "Student Management",
+                    title = "Advisory Class Management",
                     description = "Add, edit, or remove students",
                     icon = Icons.Default.Groups,
                     iconColor = PrimaryBlue,
@@ -153,7 +153,7 @@ fun AdminConfigurationScreen(
 @Composable
 fun DebugSettingsButton(onClick: () -> Unit) {
     var tapCount by remember { mutableStateOf(0) }
-    val scope = rememberCoroutineScope()
+    // val scope = rememberCoroutineScope() // Removed unused variable
     
     // Reset tap count after 3 seconds of inactivity
     LaunchedEffect(tapCount) {

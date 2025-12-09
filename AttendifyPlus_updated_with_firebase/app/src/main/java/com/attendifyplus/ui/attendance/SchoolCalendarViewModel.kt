@@ -85,25 +85,28 @@ class SchoolCalendarViewModel(
             val q4Start = q3End + 86400000
             val q4End = endCal.timeInMillis // align with end
 
-            val defaultPeriod = SchoolPeriodEntity(
-                id = 1,
-                schoolYear = schoolYear,
-                q1Start = startCal.timeInMillis,
-                q1End = q1End,
-                q2Start = q2Start,
-                q2End = q2End,
-                q3Start = q3Start,
-                q3End = q3End,
-                q4Start = q4Start,
-                q4End = q4End,
-                // Apply same to SHS for now
-                shsQ1Start = startCal.timeInMillis, shsQ1End = q1End,
-                shsQ2Start = q2Start, shsQ2End = q2End,
-                shsQ3Start = q3Start, shsQ3End = q3End,
-                shsQ4Start = q4Start, shsQ4End = q4End,
-                synced = false
-            )
-            periodRepo.insert(defaultPeriod)
+            val existingPeriod = periodRepo.getPeriod()
+            if (existingPeriod == null) {
+                val defaultPeriod = SchoolPeriodEntity(
+                    id = 1,
+                    schoolYear = schoolYear,
+                    q1Start = startCal.timeInMillis,
+                    q1End = q1End,
+                    q2Start = q2Start,
+                    q2End = q2End,
+                    q3Start = q3Start,
+                    q3End = q3End,
+                    q4Start = q4Start,
+                    q4End = q4End,
+                    // Apply same to SHS for now
+                    shsQ1Start = startCal.timeInMillis, shsQ1End = q1End,
+                    shsQ2Start = q2Start, shsQ2End = q2End,
+                    shsQ3Start = q3Start, shsQ3End = q3End,
+                    shsQ4Start = q4Start, shsQ4End = q4End,
+                    synced = false
+                )
+                periodRepo.insert(defaultPeriod)
+            }
         }
     }
 
@@ -133,10 +136,19 @@ class SchoolCalendarViewModel(
                 _importStatus.value = "Importing..."
             }
             try {
+                // Clear existing events before importing new ones to prevent duplication
+                eventRepo.deleteAllEvents()
+
                 val inputStream = context.contentResolver.openInputStream(uri)
                 val reader = BufferedReader(InputStreamReader(inputStream))
                 val eventsToInsert = mutableListOf<SchoolEventEntity>()
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                
+                // Try different date formats
+                val formats = listOf(
+                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()),
+                    SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()),
+                    SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                )
                 
                 // Track start/end quarter dates if found in CSV
                 var q1Start = 0L; var q1End = 0L
@@ -147,6 +159,7 @@ class SchoolCalendarViewModel(
                 reader.useLines { lines ->
                     lines.forEachIndexed { index, line ->
                         val trimmedLine = line.trim()
+                        // Skip header or empty lines
                         if (index == 0 && (trimmedLine.contains("Date", ignoreCase = true) || trimmedLine.contains("Title", ignoreCase = true))) {
                             return@forEachIndexed
                         }
@@ -159,37 +172,48 @@ class SchoolCalendarViewModel(
                             val description = tokens[2].trim()
                             val type = if (tokens.size > 3 && tokens[3].isNotBlank()) tokens[3].trim() else "activity"
                             
-                            try {
-                                val date = dateFormat.parse(dateStr)?.time ?: 0L
-                                if (date > 0 && title.isNotBlank()) {
-                                    // Check if this event defines a period
-                                    val lowerTitle = title.lowercase(Locale.getDefault())
-                                    if (type.equals("period", ignoreCase = true) || lowerTitle.contains("quarter")) {
-                                        when {
-                                            lowerTitle.contains("1st quarter start") || lowerTitle.contains("q1 start") -> q1Start = date
-                                            lowerTitle.contains("1st quarter end") || lowerTitle.contains("q1 end") -> q1End = date
-                                            lowerTitle.contains("2nd quarter start") || lowerTitle.contains("q2 start") -> q2Start = date
-                                            lowerTitle.contains("2nd quarter end") || lowerTitle.contains("q2 end") -> q2End = date
-                                            lowerTitle.contains("3rd quarter start") || lowerTitle.contains("q3 start") -> q3Start = date
-                                            lowerTitle.contains("3rd quarter end") || lowerTitle.contains("q3 end") -> q3End = date
-                                            lowerTitle.contains("4th quarter start") || lowerTitle.contains("q4 start") -> q4Start = date
-                                            lowerTitle.contains("4th quarter end") || lowerTitle.contains("q4 end") -> q4End = date
-                                        }
-                                    } else {
-                                        // Regular event
-                                        val event = SchoolEventEntity(
-                                            date = date,
-                                            title = title,
-                                            description = description,
-                                            type = type,
-                                            isNoClass = (type.equals("holiday", ignoreCase = true) || type.equals("no-class", ignoreCase = true)),
-                                            synced = false
-                                        )
-                                        eventsToInsert.add(event)
-                                    }
+                            var date = 0L
+                            for (format in formats) {
+                                try {
+                                    date = format.parse(dateStr)?.time ?: 0L
+                                    if (date > 0) break
+                                } catch (e: Exception) {
+                                    // Try next format
                                 }
-                            } catch (e: Exception) {
-                                // Ignore malformed dates
+                            }
+
+                            if (date > 0 && title.isNotBlank()) {
+                                // Check if this event defines a period
+                                val lowerTitle = title.lowercase(Locale.getDefault())
+                                val isPeriodEvent = type.equals("period", ignoreCase = true) || lowerTitle.contains("quarter") || lowerTitle.contains("grading")
+
+                                if (isPeriodEvent) {
+                                    // Logic for capturing quarter dates
+                                    when {
+                                        (lowerTitle.contains("1st") || lowerTitle.contains("first")) && (lowerTitle.contains("start") || lowerTitle.contains("begin")) -> q1Start = date
+                                        (lowerTitle.contains("1st") || lowerTitle.contains("first")) && (lowerTitle.contains("end") || lowerTitle.contains("exam")) -> q1End = date
+                                        
+                                        (lowerTitle.contains("2nd") || lowerTitle.contains("second")) && (lowerTitle.contains("start") || lowerTitle.contains("begin")) -> q2Start = date
+                                        (lowerTitle.contains("2nd") || lowerTitle.contains("second")) && (lowerTitle.contains("end") || lowerTitle.contains("exam")) -> q2End = date
+                                        
+                                        (lowerTitle.contains("3rd") || lowerTitle.contains("third")) && (lowerTitle.contains("start") || lowerTitle.contains("begin")) -> q3Start = date
+                                        (lowerTitle.contains("3rd") || lowerTitle.contains("third")) && (lowerTitle.contains("end") || lowerTitle.contains("exam")) -> q3End = date
+                                        
+                                        (lowerTitle.contains("4th") || lowerTitle.contains("fourth")) && (lowerTitle.contains("start") || lowerTitle.contains("begin")) -> q4Start = date
+                                        (lowerTitle.contains("4th") || lowerTitle.contains("fourth")) && (lowerTitle.contains("end") || lowerTitle.contains("exam")) -> q4End = date
+                                    }
+                                } 
+                                
+                                // Always add as an event for visualization, even if it's a period marker
+                                val event = SchoolEventEntity(
+                                    date = date,
+                                    title = title,
+                                    description = description,
+                                    type = type,
+                                    isNoClass = (type.equals("holiday", ignoreCase = true) || type.equals("no-class", ignoreCase = true)),
+                                    synced = false
+                                )
+                                eventsToInsert.add(event)
                             }
                         }
                     }
@@ -200,9 +224,10 @@ class SchoolCalendarViewModel(
                 }
                 
                 // If periods were found, update the SchoolPeriodEntity
-                if (q1Start > 0) {
+                if (q1Start > 0 || q1End > 0 || q2Start > 0 || q2End > 0 || q3Start > 0 || q3End > 0 || q4Start > 0 || q4End > 0) {
                     val currentPeriod = periodRepo.getPeriod() ?: SchoolPeriodEntity(
-                        schoolYear = "2024-2025", // Default if not set
+                        id = 1,
+                        schoolYear = "2024-2025", 
                         q1Start = 0L, q1End = 0L, q2Start = 0L, q2End = 0L, q3Start = 0L, q3End = 0L, q4Start = 0L, q4End = 0L
                     )
                     
@@ -215,21 +240,21 @@ class SchoolCalendarViewModel(
                         q3End = if (q3End > 0) q3End else currentPeriod.q3End,
                         q4Start = if (q4Start > 0) q4Start else currentPeriod.q4Start,
                         q4End = if (q4End > 0) q4End else currentPeriod.q4End,
-                        // Update SHS mirrors if they were zero/default, otherwise assume JHS priority or user manual edit
-                        shsQ1Start = if (currentPeriod.shsQ1Start == 0L) q1Start else currentPeriod.shsQ1Start,
-                        shsQ1End = if (currentPeriod.shsQ1End == 0L) q1End else currentPeriod.shsQ1End,
-                         shsQ2Start = if (currentPeriod.shsQ2Start == 0L) q2Start else currentPeriod.shsQ2Start,
-                        shsQ2End = if (currentPeriod.shsQ2End == 0L) q2End else currentPeriod.shsQ2End,
-                         shsQ3Start = if (currentPeriod.shsQ3Start == 0L) q3Start else currentPeriod.shsQ3Start,
-                        shsQ3End = if (currentPeriod.shsQ3End == 0L) q3End else currentPeriod.shsQ3End,
-                         shsQ4Start = if (currentPeriod.shsQ4Start == 0L) q4Start else currentPeriod.shsQ4Start,
-                        shsQ4End = if (currentPeriod.shsQ4End == 0L) q4End else currentPeriod.shsQ4End
+                        // Apply changes to SHS as well if they are 0
+                        shsQ1Start = if (currentPeriod.shsQ1Start == 0L && q1Start > 0) q1Start else currentPeriod.shsQ1Start,
+                        shsQ1End = if (currentPeriod.shsQ1End == 0L && q1End > 0) q1End else currentPeriod.shsQ1End,
+                        shsQ2Start = if (currentPeriod.shsQ2Start == 0L && q2Start > 0) q2Start else currentPeriod.shsQ2Start,
+                        shsQ2End = if (currentPeriod.shsQ2End == 0L && q2End > 0) q2End else currentPeriod.shsQ2End,
+                        shsQ3Start = if (currentPeriod.shsQ3Start == 0L && q3Start > 0) q3Start else currentPeriod.shsQ3Start,
+                        shsQ3End = if (currentPeriod.shsQ3End == 0L && q3End > 0) q3End else currentPeriod.shsQ3End,
+                        shsQ4Start = if (currentPeriod.shsQ4Start == 0L && q4Start > 0) q4Start else currentPeriod.shsQ4Start,
+                        shsQ4End = if (currentPeriod.shsQ4End == 0L && q4End > 0) q4End else currentPeriod.shsQ4End
                     )
                     periodRepo.insert(updatedPeriod)
                 }
 
                 withContext(Dispatchers.Main) {
-                    val msg = if (q1Start > 0) {
+                    val msg = if (q1Start > 0 || q1End > 0) {
                         "Imported ${eventsToInsert.size} events & Updated Academic Periods"
                     } else {
                         "Success: Imported ${eventsToInsert.size} events."
