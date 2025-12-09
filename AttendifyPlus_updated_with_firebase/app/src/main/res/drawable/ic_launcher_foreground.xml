@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- This is a placeholder wrapper. In a real scenario, you'd use the actual vector path or 
+         reference the bitmap. Since we have a PNG, we'll wrap it in a bitmap inside a layer-list 
+         or just reference it directly in the adaptive-icon if it was suitable. 
+         
+         However, for adaptive icons, it's best to have a foreground that is ~66% of the 108dp canvas (72dp).
+         
+         Let's try to center the PNG image. -->
+         
+    <group android:scaleX="0.66" android:scaleY="0.66" android:translateX="18.36" android:translateY="18.36">
+        <path
+            android:pathData="M0,0h108v108h-108z"
+            android:fillColor="#00000000"/> <!-- Transparent filler -->
+    </group>
+</vector>

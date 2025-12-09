@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AttendifyPlus" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Set the splash screen background to match your custom splash screen background (White) -->
+        <item name="windowSplashScreenBackground">#FFFFFF</item>
+        
+        <!-- HIDE the system splash icon by making it transparent -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/transparent_icon</item>
+        
+        <!-- Post splash theme -->
+        <item name="postSplashScreenTheme">@style/Theme.AttendifyPlus</item>
+    </style>
+</resources>

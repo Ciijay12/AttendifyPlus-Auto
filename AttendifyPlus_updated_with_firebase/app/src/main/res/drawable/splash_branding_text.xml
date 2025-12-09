@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="80dp"
+    android:viewportWidth="200"
+    android:viewportHeight="80">
+
+    <!-- Background for testing visibility, remove in production if not needed -->
+    <!-- <path android:fillColor="#00000000" android:pathData="M0,0h200v80h-200z"/> -->
+
+    <!-- "Research Project" Text -->
+    <!-- Since vector drawables don't support text directly, we simulate it or user must provide an image.
+         For this task, I will create a simple geometric representation or placeholder. 
+         Ideally, this should be an SVG converted to VectorDrawable of the text "Research Project".
+         
+         Since I cannot generate complex font vectors on the fly, I will create a clean, modern
+         text-like layout using paths or simple shapes, OR better yet, instruct the user to use an image if they want specific fonts.
+         
+         HOWEVER, to fulfill the request "modern and premium", I will try to create a sleek "badge" style 
+         or just use a placeholder text representation.
+         
+         Actually, a better approach for "Branding Image" if I can't render text is to use a bitmap of the text.
+         But I don't have a bitmap generator.
+         
+         Let's try to construct a simple "Version 1.0" and "Research Project" using a mocked up path for simplicity, 
+         or just provide a placeholder that looks like a footer.
+         
+         Wait, I can use a View in the Activity layout for pre-Android 12, but for Android 12 Splash Screen API, 
+         the branding image must be a drawable.
+         
+         I'll stick to a simple minimalist design using lines and shapes to represent "premium".
+         
+         Actually, I will create a drawable that references a bitmap if possible, but I don't have one.
+         
+         Alternative: I will use a simple layout in MainActivity to display this "Splash" content 
+         AFTER the system splash screen fades out, creating a "extended splash" experience.
+         
+         BUT the user asked to "add in the splash screen".
+         
+         The system splash screen (Android 12+) only allows: Icon, Background, Branding Image.
+         The Branding Image is only shown on devices that support it and it's static.
+         
+         Let's try to create a `splash_branding_text.xml` that is a layer-list with the text baked in? 
+         No, can't bake text in XML drawable without a font.
+         
+         STRATEGY:
+         1. I cannot generate a text-based VectorDrawable from scratch without the path data for the letters.
+         2. I will implement a "Custom Splash Screen" Composable in MainActivity that shows up 
+            IMMEDIATELY after the system splash screen. This allows full customization (Version, Text, Animations).
+         3. This gives the "Seamless" experience: System Splash (Logo) -> Custom Splash (Logo + Text + Version) -> App.
+    -->
+    
+</vector>

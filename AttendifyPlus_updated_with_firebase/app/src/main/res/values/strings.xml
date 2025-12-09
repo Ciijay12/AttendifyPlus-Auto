@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">AttendifyPlus</string>
+    <string name="student_my_classes_title">My Classes</string>
+    <string name="student_no_classes_enrolled_message">No Classes Enrolled by the Teacher yet.</string>
+</resources>
