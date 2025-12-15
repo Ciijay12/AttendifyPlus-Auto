@@ -22,11 +22,18 @@ jobs:
 
       - name: Decode Keystore
         run: |
+          mkdir -p AttendifyPlus_updated_with_firebase/app
           echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/upload-keystore.jks
 
       - name: Create google-services.json
         run: |
-          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > AttendifyPlus_updated_with_firebase/app/google-services.json
+          mkdir -p AttendifyPlus_updated_with_firebase/app
+          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > AttendifyPlus_updated_with_firebase/app/google-services.json
+
+      - name: Verify google-services.json
+        run: |
+          ls -l AttendifyPlus_updated_with_firebase/app
+          wc -c AttendifyPlus_updated_with_firebase/app/google-services.json
 
       - name: Grant Gradle permission
         run: |
