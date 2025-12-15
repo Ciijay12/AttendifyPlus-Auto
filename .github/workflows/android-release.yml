@@ -1,24 +1,35 @@
----
 name: Build & Release APK
+
 on:
   push:
     tags:
-      - v*
+      - 'v*'
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
+      
       - name: Setup JDK
         uses: actions/setup-java@v3
         with:
-          java-version: "17"
-          distribution: temurin
+          java-version: '17'
+          distribution: 'temurin'
           cache: gradle
+
+      # 1. Decode Keystore
       - name: Decode Keystore
-        run: >
-          echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode >
-          AttendifyPlus_updated_with_firebase/app/upload-keystore.jks
+        run: |
+          echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/upload-keystore.jks
+
+      # 2. Decode Google Services JSON (NEW STEP)
+      - name: Decode Google Services JSON
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/google-services.json
+
+      # 3. Build APK
       - name: Build APK
         run: |
           cd AttendifyPlus_updated_with_firebase
@@ -28,6 +39,8 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+
+      # 4. Upload Release
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
