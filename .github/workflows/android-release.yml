@@ -1,18 +1,23 @@
 name: Build & Release APK
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch: # Manual trigger button
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
+      # 0. Checkout source with full history and tags for semantic versioning
       - name: Checkout source
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # <--- Fetch all commits and tags
 
+      # 1. Setup JDK 17
       - name: Setup JDK 17
         uses: actions/setup-java@v3
         with:
@@ -20,55 +25,85 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      # 2. Cache Gradle for faster builds
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 3. Decode Keystore
       - name: Decode Keystore
         run: |
           mkdir -p AttendifyPlus_updated_with_firebase/app
           echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/upload-keystore.jks
 
-      - name: Create google-services.json from Base64
+      # 4. Decode google-services.json from Base64 secret
+      - name: Create Google Services JSON
         run: |
           mkdir -p AttendifyPlus_updated_with_firebase/app
           echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/google-services.json
 
-      - name: Verify google-services.json and fail if empty
+      # 4a. Verify JSON exists before build
+      - name: Verify google-services.json
         run: |
-          echo "Checking google-services.json..."
           FILE="AttendifyPlus_updated_with_firebase/app/google-services.json"
-          
-          # Check if file exists
           if [ ! -f "$FILE" ]; then
-            echo "ERROR: google-services.json does not exist!"
+            echo "ERROR: google-services.json missing! Check your Secret name/value."
             exit 1
           fi
-          
-          # Check if file is empty
           SIZE=$(wc -c < "$FILE")
           if [ "$SIZE" -eq 0 ]; then
-            echo "ERROR: google-services.json is empty!"
+            echo "ERROR: google-services.json is empty! The Secret might be invalid."
             exit 1
           fi
-          
-          # Print first few lines for verification
-          head -n 5 "$FILE"
-          echo "$SIZE bytes"
+          echo "Success: google-services.json exists and is $SIZE bytes"
 
-      - name: Grant Gradle permission
-        run: |
-          cd AttendifyPlus_updated_with_firebase
-          chmod +x gradlew
-
+      # 5. Build APK with Gradle optimization
       - name: Build Release APK
         run: |
           cd AttendifyPlus_updated_with_firebase
-          ./gradlew assembleRelease
+          chmod +x gradlew
+          ./gradlew assembleRelease --parallel --max-workers=$(nproc)
         env:
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
 
+      # 6. Generate Semantic Version Tag (auto increment patch)
+      - name: Create Semantic Version Tag
+        id: tag
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+
+          # Get latest tag (vX.Y.Z)
+          LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            NEW_TAG="v1.0.0"
+          else
+            # Extract major.minor.patch
+            PATCH=$(( $(echo $LATEST_TAG | cut -d. -f3) + 1 ))
+            MAJOR=$(echo $LATEST_TAG | cut -d. -f1 | sed 's/v//')
+            MINOR=$(echo $LATEST_TAG | cut -d. -f2)
+            NEW_TAG="v$MAJOR.$MINOR.$PATCH"
+          fi
+
+          git tag -a $NEW_TAG -m "Auto-release $NEW_TAG"
+          git push origin $NEW_TAG
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      # 7. Upload APK to GitHub Release
       - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: AttendifyPlus_updated_with_firebase/app/build/outputs/apk/release/app-release.apk
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
