@@ -180,7 +180,7 @@ class AdminStudentManagementViewModel(
                 lastName = lastName, 
                 grade = advisoryClass.grade, 
                 section = advisoryClass.section,
-                username = firstName
+                username = id // Default username should be ID to prevent login issues with non-unique names
             )
             studentRepo.insert(newStudent)
         }
@@ -419,7 +419,7 @@ class AdminStudentManagementViewModel(
                                     lastName = lastName,
                                     grade = grade,
                                     section = section,
-                                    username = firstName
+                                    username = newId // Set default username to ID to avoid duplicates
                                 )
                                 studentsToInsert.add(student)
                             }

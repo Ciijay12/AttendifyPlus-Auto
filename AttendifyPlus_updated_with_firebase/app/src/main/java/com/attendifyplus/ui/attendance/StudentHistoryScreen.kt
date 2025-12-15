@@ -1,14 +1,16 @@
 package com.attendifyplus.ui.attendance
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items as lazyRowItems
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -23,26 +25,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.attendifyplus.ui.theme.PrimaryBlue
-import com.attendifyplus.ui.theme.StandardScreen
 import com.attendifyplus.ui.theme.SuccessGreen
 import com.attendifyplus.ui.theme.WarningYellow
+import com.attendifyplus.ui.theme.PillShape
 import org.koin.androidx.compose.getViewModel
+import org.koin.core.parameter.parametersOf
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun StudentHistoryScreen(
-    navController: NavController, 
-    viewModel: StudentHistoryViewModel = getViewModel(),
+    navController: NavController,
+    studentId: String,
+    viewModel: StudentHistoryViewModel = getViewModel { parametersOf(studentId) },
     onLogout: () -> Unit = {}
 ) {
     val history by viewModel.history.collectAsState()
+    val enrolledSubjects by viewModel.enrolledSubjects.collectAsState()
+    val selectedSubject by viewModel.selectedSubject.collectAsState()
+    
     var showLogoutDialog by remember { mutableStateOf(false) }
     
-    // Stats
-    val total = history.size
+    // Stats calculation based on FILTERED history
     val present = history.count { it.status.equals("present", ignoreCase = true) }
-    val rate = if (total > 0) (present.toFloat() / total.toFloat() * 100).toInt() else 0
+    val late = history.count { it.status.equals("late", ignoreCase = true) }
+    val absent = history.count { it.status.equals("absent", ignoreCase = true) }
+    val total = history.size
 
     if (showLogoutDialog) {
         AlertDialog(
@@ -69,7 +77,6 @@ fun StudentHistoryScreen(
         )
     }
 
-    // Removed StandardScreen wrapper to use direct Surface with statusBarsPadding
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colors.background
@@ -78,26 +85,52 @@ fun StudentHistoryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .padding(16.dp) // Consistent padding
+                .padding(16.dp)
         ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colors.onSurface)
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(
+                 Text(
                     text = "Attendance History",
                     style = MaterialTheme.typography.h5.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colors.onSurface)
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
+            
+            // Subject Filter Chips
+            if (enrolledSubjects.isNotEmpty()) {
+                Text(
+                    text = "Filter by Subject",
+                    style = MaterialTheme.typography.subtitle2,
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    item {
+                        FilterChip(
+                            text = "All Subjects",
+                            selected = selectedSubject == null,
+                            onClick = { viewModel.setSubjectFilter(null) }
+                        )
+                    }
+                    lazyRowItems(enrolledSubjects) { subject ->
+                        FilterChip(
+                            text = subject.subjectName,
+                            selected = selectedSubject == subject.subjectName,
+                            onClick = { viewModel.setSubjectFilter(subject.subjectName) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
 
-            // Stats Card
+            // Stats Card (Modified to show Counts instead of misleading Rate)
             Card(
                 backgroundColor = PrimaryBlue,
                 contentColor = Color.White,
@@ -106,35 +139,18 @@ fun StudentHistoryScreen(
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(24.dp)
+                        .padding(20.dp)
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "Attendance Rate",
-                            style = MaterialTheme.typography.caption.copy(color = Color.White.copy(alpha = 0.8f))
-                        )
-                        Text(
-                            text = "$rate%",
-                            style = MaterialTheme.typography.h4.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-                    Divider(
-                        color = Color.White.copy(alpha = 0.2f), 
-                        modifier = Modifier.height(40.dp).width(1.dp)
-                    )
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "Total Classes",
-                            style = MaterialTheme.typography.caption.copy(color = Color.White.copy(alpha = 0.8f))
-                        )
-                        Text(
-                            text = "$total",
-                            style = MaterialTheme.typography.h4.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
+                    StatCounter("Present", present)
+                    Divider(color = Color.White.copy(alpha = 0.2f), modifier = Modifier.height(30.dp).width(1.dp))
+                    StatCounter("Late", late)
+                    Divider(color = Color.White.copy(alpha = 0.2f), modifier = Modifier.height(30.dp).width(1.dp))
+                    StatCounter("Absent", absent)
+                    Divider(color = Color.White.copy(alpha = 0.2f), modifier = Modifier.height(30.dp).width(1.dp))
+                    StatCounter("Total", total)
                 }
             }
 
@@ -155,12 +171,14 @@ fun StudentHistoryScreen(
                 if (history.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No attendance records found.", color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f))
+                            Text(
+                                if (selectedSubject != null) "No records for ${selectedSubject}." else "No attendance records found.", 
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                            )
                         }
                     }
                 } else {
                     items(history) { item ->
-                        // Direct formatting without remember to avoid issues
                         val dateStr = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(item.timestamp))
                         val timeStr = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.timestamp))
                         
@@ -188,7 +206,7 @@ fun StudentHistoryScreen(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
-                                            if (item.status == "present") Icons.Default.CheckCircle else Icons.Default.Schedule, 
+                                            if (item.status.equals("present", true)) Icons.Default.CheckCircle else Icons.Default.Schedule, 
                                             contentDescription = null, 
                                             tint = statusColor
                                         )
@@ -199,11 +217,11 @@ fun StudentHistoryScreen(
                                 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = dateStr,
+                                        text = item.subject ?: "Homeroom",
                                         style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colors.onSurface)
                                     )
                                     Text(
-                                        text = timeStr,
+                                        text = "$dateStr • $timeStr",
                                         style = MaterialTheme.typography.caption.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f))
                                     )
                                 }
@@ -236,5 +254,40 @@ fun StudentHistoryScreen(
                 Text("Log Out", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
+    }
+}
+
+@Composable
+fun FilterChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (selected) PrimaryBlue else Color.Transparent,
+        contentColor = if (selected) Color.White else MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
+        shape = PillShape,
+        border = if (!selected) BorderStroke(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.2f)) else null,
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.caption.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
+}
+
+@Composable
+fun StatCounter(label: String, count: Int) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.h6.copy(fontWeight = FontWeight.Bold)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.caption.copy(color = Color.White.copy(alpha = 0.7f))
+        )
     }
 }

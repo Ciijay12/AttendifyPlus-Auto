@@ -36,6 +36,13 @@ data class SubjectWithStatus(
     val teacherName: String // Added teacher name
 )
 
+data class StudentAdvisoryInfo(
+    val grade: String = "",
+    val section: String = "",
+    val adviserName: String = "Unassigned",
+    val track: String? = null // For SHS
+)
+
 class StudentDashboardViewModel(
     private val studentRepo: StudentRepository,
     private val attendanceRepo: AttendanceRepository,
@@ -52,8 +59,9 @@ class StudentDashboardViewModel(
     private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
     
-    private val _studentGradeSection = MutableStateFlow("")
-    val studentGradeSection: StateFlow<String> = _studentGradeSection.asStateFlow()
+    // New State for Advisory Card
+    private val _advisoryInfo = MutableStateFlow(StudentAdvisoryInfo())
+    val advisoryInfo: StateFlow<StudentAdvisoryInfo> = _advisoryInfo.asStateFlow()
     
     private val _hasChangedCredentials = MutableStateFlow(false)
     val hasChangedCredentials: StateFlow<Boolean> = _hasChangedCredentials.asStateFlow()
@@ -108,10 +116,23 @@ class StudentDashboardViewModel(
         viewModelScope.launch {
             val student = studentRepo.getById(studentId)
             _userName.value = student?.firstName ?: "Student"
-            _studentGradeSection.value = if (student != null) "Grade ${student.grade} - ${student.section}" else ""
             _hasChangedCredentials.value = student?.hasChangedCredentials ?: false
 
             if (student != null) {
+                // Fetch Advisory Info (Adviser)
+                // teacherRepo.getAll() returns a List directly (suspend function), not a Flow
+                val teachers = teacherRepo.getAll() 
+                val adviser = teachers.find { 
+                    it.advisoryGrade == student.grade && it.advisorySection == student.section 
+                }
+                
+                _advisoryInfo.value = StudentAdvisoryInfo(
+                    grade = student.grade,
+                    section = student.section,
+                    adviserName = if (adviser != null) "${adviser.firstName} ${adviser.lastName}" else "Unassigned",
+                    track = adviser?.advisoryTrack // Get track from adviser
+                )
+
                 // Fetch ALL classes and filter manually to be robust against format mismatches
                 // e.g. "11" vs "Grade 11", "Section A" vs "A"
                 
@@ -162,8 +183,8 @@ class StudentDashboardViewModel(
                     
                     for (subject in enrolledClasses) {
                         val record = todaysRecords.find { it.subject == subject.subjectName }
-                        val teacher = teacherRepo.getById(subject.teacherId)
-                        val teacherName = if (teacher != null) "${teacher.firstName} ${teacher.lastName}" else "Unknown Teacher"
+                        val subjTeacher = teacherRepo.getById(subject.teacherId)
+                        val teacherName = if (subjTeacher != null) "${subjTeacher.firstName} ${subjTeacher.lastName}" else "Unknown Teacher"
                         
                         resultList.add(SubjectWithStatus(subject, record?.status ?: "unmarked", teacherName))
                     }
@@ -196,6 +217,14 @@ class StudentDashboardViewModel(
         } else {
             viewModelScope.launch {
                 _syncState.value = SyncState.Loading
+                
+                // Explicitly sync Period to fix potential missing data
+                try {
+                    schoolPeriodRepo.syncPeriod()
+                } catch (e: Exception) {
+                    // Ignore, sync might fail if offline but data should be in DB if ever synced
+                }
+                
                 loadStudentDetails(id)
                 delay(1000)
                 _syncState.value = SyncState.Success

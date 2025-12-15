@@ -6,8 +6,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,7 +16,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -26,7 +23,6 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.attendifyplus.ui.components.InformationBoardCard
 import com.attendifyplus.ui.theme.DeepPurple
@@ -34,15 +30,15 @@ import com.attendifyplus.ui.theme.PillShape
 import com.attendifyplus.ui.theme.PrimaryBlue
 import com.attendifyplus.ui.theme.RoyalIndigo
 import com.attendifyplus.ui.theme.SecondaryTeal
+import com.attendifyplus.ui.theme.SuccessGreen
+import com.attendifyplus.ui.theme.WarningYellow
+import com.attendifyplus.ui.theme.LocalWindowInfo
+import com.attendifyplus.ui.theme.WindowInfo
 import com.attendifyplus.util.QRGenerator
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.getViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import com.attendifyplus.ui.theme.SuccessGreen
-import com.attendifyplus.ui.theme.WarningYellow
-import com.attendifyplus.ui.theme.LocalWindowInfo
-import com.attendifyplus.ui.theme.WindowInfo
 
 @Composable
 fun StudentDashboardScreen(
@@ -58,7 +54,7 @@ fun StudentDashboardScreen(
     val dailyStatus by viewModel.dailyStatus.collectAsState()
     val subjectClassesWithStatus by viewModel.subjectClassesWithStatus.collectAsState()
     val userName by viewModel.userName.collectAsState()
-    val studentGradeSection by viewModel.studentGradeSection.collectAsState()
+    val advisoryInfo by viewModel.advisoryInfo.collectAsState()
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val currentPeriod by viewModel.schoolPeriod.collectAsState()
     val syncState by viewModel.syncState.collectAsState()
@@ -69,8 +65,6 @@ fun StudentDashboardScreen(
     val currentDate = remember { LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMM dd")) }
     
     val windowInfo = LocalWindowInfo.current
-    val isWideScreen = windowInfo.screenWidthInfo is WindowInfo.WindowType.Medium ||
-            windowInfo.screenWidthInfo is WindowInfo.WindowType.Expanded
 
     // System Bar Icon Control
     val useDarkIcons = currentTab != 0
@@ -102,12 +96,13 @@ fun StudentDashboardScreen(
     }
 
     if (showMyQrDialog) {
+        val gradeSection = if (advisoryInfo.grade.isNotBlank()) "Grade ${advisoryInfo.grade} - ${advisoryInfo.section}" else ""
         MyQrDialog(
             onDismiss = { showMyQrDialog = false },
             studentName = userName,
             studentId = studentId,
             qrCodeBitmap = qrCodeBitmap,
-            studentGradeSection = studentGradeSection
+            studentGradeSection = gradeSection
         )
     }
 
@@ -207,9 +202,9 @@ fun StudentDashboardScreen(
                                     ),
                                     maxLines = 1,
                                 )
-                                if (studentGradeSection.isNotBlank()) {
+                                if (advisoryInfo.grade.isNotBlank()) {
                                     Text(
-                                        text = studentGradeSection,
+                                        text = "Grade ${advisoryInfo.grade} - ${advisoryInfo.section}",
                                         style = MaterialTheme.typography.subtitle2.copy(
                                             color = Color.White.copy(alpha = 0.9f)
                                         )
@@ -243,102 +238,68 @@ fun StudentDashboardScreen(
                         
                         Spacer(modifier = Modifier.height(60.dp)) // Push content below wavy header
                         
-                        if (isWideScreen) {
-                            Row(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalArrangement = Arrangement.spacedBy(24.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .verticalScroll(rememberScrollState())
-                                ) {
-                                    InformationBoardCard(
-                                        upcomingEvents = upcomingEvents,
-                                        currentPeriod = currentPeriod,
-                                        dailyStatus = dailyStatus,
-                                        onViewCalendar = {}
-                                    )
-                                    Spacer(Modifier.height(100.dp))
-                                }
-                                
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Enrolled Classes",
-                                        style = MaterialTheme.typography.h6,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colors.onBackground
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    
-                                    if (subjectClassesWithStatus.isEmpty()) {
-                                        Text(
-                                            text = "No classes enrolled yet.",
-                                            style = MaterialTheme.typography.body1,
-                                            color = MaterialTheme.colors.onBackground.copy(alpha = 0.6f)
-                                        )
-                                    } else {
-                                        // Removed Card wrapper to allow items to have own elevation
-                                        LazyColumn(
-                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp), // Added padding for shadow
-                                            verticalArrangement = Arrangement.spacedBy(12.dp) // Spacing between cards
-                                        ) {
-                                            items(subjectClassesWithStatus) { subjectWithStatus ->
-                                                ClassCard(
-                                                    subjectClass = subjectWithStatus.subject, 
-                                                    status = subjectWithStatus.status,
-                                                    teacherName = subjectWithStatus.teacherName,
-                                                    onClick = { }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            // Portrait Mode
+                        // Main Content (Scrollable)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // 1. Information Board
                             InformationBoardCard(
                                 upcomingEvents = upcomingEvents,
                                 currentPeriod = currentPeriod,
                                 dailyStatus = dailyStatus,
                                 onViewCalendar = {}
                             )
-                            Spacer(Modifier.height(16.dp))
-                            Text(
-                                text = "Enrolled Classes",
-                                style = MaterialTheme.typography.h6,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colors.onBackground
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            if (subjectClassesWithStatus.isEmpty()) {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().height(100.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "No classes enrolled yet.",
-                                        style = MaterialTheme.typography.body1,
-                                        color = MaterialTheme.colors.onBackground.copy(alpha = 0.6f)
-                                    )
-                                }
-                            } else {
-                                // Removed outer Card to let individual items shine
-                                LazyColumn(
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    items(subjectClassesWithStatus) { subjectWithStatus ->
+
+                            // 2. Enrolled Advisory Class (Only if assigned)
+                            if (advisoryInfo.grade.isNotBlank()) {
+                                AdvisoryClassCard(
+                                    grade = advisoryInfo.grade,
+                                    section = advisoryInfo.section,
+                                    track = advisoryInfo.track,
+                                    adviserName = advisoryInfo.adviserName
+                                )
+                            }
+
+                            // 3. My Subjects (Renamed)
+                            Column {
+                                Text(
+                                    text = "My Subjects",
+                                    style = MaterialTheme.typography.h6,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colors.onBackground
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                
+                                if (subjectClassesWithStatus.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().height(100.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "No subjects enrolled yet.",
+                                            style = MaterialTheme.typography.body1,
+                                            color = MaterialTheme.colors.onBackground.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                } else {
+                                    // List of subjects
+                                    subjectClassesWithStatus.forEach { subjectWithStatus ->
                                         ClassCard(
                                             subjectClass = subjectWithStatus.subject, 
                                             status = subjectWithStatus.status,
                                             teacherName = subjectWithStatus.teacherName,
                                             onClick = { }
                                         )
+                                        Spacer(Modifier.height(12.dp))
                                     }
                                 }
                             }
+                            
+                            // Bottom Spacer
+                            Spacer(Modifier.height(32.dp))
                         }
                     }
                 }
@@ -376,7 +337,11 @@ fun StudentDashboardScreen(
 
                 2 -> {
                     // History Tab for Student
-                    StudentHistoryScreen(navController = navController, onLogout = onLogout)
+                    StudentHistoryScreen(
+                        navController = navController,
+                        studentId = studentId,
+                        onLogout = onLogout
+                    )
                 }
             }
         }
@@ -426,6 +391,84 @@ fun StudentDashboardScreen(
 }
 
 @Composable
+fun AdvisoryClassCard(
+    grade: String,
+    section: String,
+    track: String?,
+    adviserName: String
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        elevation = 4.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(PrimaryBlue, SecondaryTeal)
+                    )
+                )
+                .padding(16.dp)
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Enrolled Advisory Class",
+                        style = MaterialTheme.typography.subtitle2.copy(color = Color.White.copy(alpha = 0.8f))
+                    )
+                    Icon(Icons.Default.School, contentDescription = null, tint = Color.White.copy(alpha = 0.5f))
+                }
+                
+                Spacer(Modifier.height(8.dp))
+                
+                Text(
+                    text = "Grade $grade - $section",
+                    style = MaterialTheme.typography.h5.copy(
+                        fontWeight = FontWeight.Bold, 
+                        color = Color.White
+                    )
+                )
+                
+                if (!track.isNullOrBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Surface(
+                        color = Color.White.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = track,
+                            style = MaterialTheme.typography.caption.copy(fontWeight = FontWeight.Bold, color = Color.White),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+                
+                Spacer(Modifier.height(12.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Person, 
+                        contentDescription = null, 
+                        tint = Color.White.copy(alpha = 0.8f), 
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Adviser: $adviserName",
+                        style = MaterialTheme.typography.body2.copy(color = Color.White.copy(alpha = 0.9f))
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun ClassCard(
     subjectClass: com.attendifyplus.data.local.entities.SubjectClassEntity,
     status: String,
@@ -451,7 +494,7 @@ fun ClassCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        elevation = 4.dp, // Increased elevation for pop
+        elevation = 2.dp,
         backgroundColor = MaterialTheme.colors.surface
     ) {
         Row(

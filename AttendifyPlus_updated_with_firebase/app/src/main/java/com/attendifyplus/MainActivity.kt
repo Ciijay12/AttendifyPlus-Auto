@@ -15,7 +15,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,12 +23,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.attendifyplus.sync.SyncWorker
 import com.attendifyplus.ui.attendance.NavHostContainer
 import com.attendifyplus.ui.theme.AttendifyTheme
 import timber.log.Timber
@@ -63,6 +67,9 @@ class MainActivity : ComponentActivity() {
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
         askNotificationPermission()
+        
+        // Robust Sync on App Entry
+        triggerForcedSync("app_entry_sync")
 
         setContent {
             AttendifyTheme {
@@ -93,6 +100,12 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    
+    override fun onStop() {
+        super.onStop()
+        // Robust Sync on App Exit / Background
+        triggerForcedSync("app_exit_sync")
+    }
 
     private fun askNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -101,6 +114,27 @@ class MainActivity : ComponentActivity() {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+    }
+    
+    private fun triggerForcedSync(tag: String) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(constraints)
+            .addTag(tag)
+            .build()
+
+        // Use Unique Work with KEEP to ensure we don't spam if already running, 
+        // but ensure at least one runs when entering/exiting.
+        // For exiting, we might want REPLACE to ensure it really tries, but KEEP is safer for data integrity.
+        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+            "global_app_sync",
+            ExistingWorkPolicy.KEEP,
+            syncRequest
+        )
+        Timber.d("Triggered forced sync: $tag")
     }
 }
 

@@ -44,13 +44,21 @@ data class SchoolPeriodEntity(
     fun determineCurrentPeriod(): String {
         val now = System.currentTimeMillis()
         return when {
+            // Check JHS Dates
             now in q1Start..q1End -> "1st Quarter"
             now in q2Start..q2End -> "2nd Quarter"
             now in q3Start..q3End -> "3rd Quarter"
             now in q4Start..q4End -> "4th Quarter"
-            // For SHS specific, we might need context or separate logic, 
-            // but usually we display general quarter or Semester if needed. 
-            // Assuming simplified view for now or overlapping dates.
+            
+            // Check SHS Dates (Fallback if JHS doesn't match, or distinct if non-overlapping)
+            now in shsQ1Start..shsQ1End -> "1st Quarter" // SHS usually aligns or just differs by Sem
+            now in shsQ2Start..shsQ2End -> "2nd Quarter"
+            now in shsQ3Start..shsQ3End -> "3rd Quarter"
+            now in shsQ4Start..shsQ4End -> "4th Quarter"
+            
+            // Semester Logic for SHS (if needed, can be derived)
+            // For now, returning Quarter name is standard.
+            
             else -> ""
         }
     }

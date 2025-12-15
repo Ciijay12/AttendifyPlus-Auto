@@ -94,11 +94,16 @@ class LoginViewModel(
             val teacher = teacherRepo.getByUsername(user)
             if (teacher != null) {
                 if (teacher.password == pass) {
-                    if (!teacher.hasChangedCredentials) {
-                        _loginState.value = LoginState.FirstTimeLogin("teacher", teacher.id)
+                    // BUG FIX: Force remote fetch to get latest credential status for teacher
+                    // We use getById because getByUsername might be slower or redundant if we have the ID
+                    // But wait, we used username to login. Let's use getById with forceRemote now that we have the ID.
+                    val freshTeacher = teacherRepo.getById(teacher.id, forceRemote = true) ?: teacher
+
+                    if (!freshTeacher.hasChangedCredentials) {
+                        _loginState.value = LoginState.FirstTimeLogin("teacher", freshTeacher.id)
                     } else {
-                        saveSession("teacher", teacher.id)
-                        _loginState.value = LoginState.Success("teacher", teacher.id)
+                        saveSession("teacher", freshTeacher.id)
+                        _loginState.value = LoginState.Success("teacher", freshTeacher.id)
                     }
                 } else {
                     _loginState.value = LoginState.Error("Invalid password")
@@ -118,11 +123,14 @@ class LoginViewModel(
             if (student != null) {
                 val storedPass = student.password ?: "123456"
                 if (storedPass == pass) {
-                     if (!student.hasChangedCredentials) {
-                        _loginState.value = LoginState.FirstTimeLogin("student", student.id)
+                    // BUG FIX: Force remote fetch to get latest credential status
+                    val freshStudent = studentRepo.getById(student.id, forceRemote = true) ?: student
+                    
+                     if (!freshStudent.hasChangedCredentials) {
+                        _loginState.value = LoginState.FirstTimeLogin("student", freshStudent.id)
                     } else {
-                        saveSession("student", student.id)
-                        _loginState.value = LoginState.Success("student", student.id)
+                        saveSession("student", freshStudent.id)
+                        _loginState.value = LoginState.Success("student", freshStudent.id)
                     }
                 } else {
                     _loginState.value = LoginState.Error("Invalid password")

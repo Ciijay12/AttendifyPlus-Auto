@@ -16,9 +16,12 @@ class StudentRepository(private val dao: StudentDao) {
     // Helper to get List synchronously (suspending)
     suspend fun getAllList(): List<StudentEntity> = dao.getAll().first()
     
-    suspend fun getById(id: String): StudentEntity? {
-        val local = dao.getById(id)
-        if (local != null) return local
+    // Updated: Added forceRemote parameter to bypass local cache
+    suspend fun getById(id: String, forceRemote: Boolean = false): StudentEntity? {
+        if (!forceRemote) {
+            val local = dao.getById(id)
+            if (local != null) return local
+        }
         
         try {
             val snapshot = dbRef.child(id).get().await()
@@ -32,6 +35,12 @@ class StudentRepository(private val dao: StudentDao) {
         } catch (e: Exception) {
             Timber.e(e, "Failed to fetch student by ID from Firebase")
         }
+        
+        // If force remote failed, try fallback to local if we skipped it initially
+        if (forceRemote) {
+            return dao.getById(id)
+        }
+        
         return null
     }
 

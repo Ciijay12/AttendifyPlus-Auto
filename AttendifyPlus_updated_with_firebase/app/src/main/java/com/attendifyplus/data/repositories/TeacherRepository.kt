@@ -11,11 +11,13 @@ class TeacherRepository(private val dao: TeacherDao) {
     
     private val dbRef = FirebaseDatabase.getInstance().getReference("teachers")
 
-    suspend fun getById(id: String): TeacherEntity? {
-        val local = dao.getById(id)
-        if (local != null) return local
+    suspend fun getById(id: String, forceRemote: Boolean = false): TeacherEntity? {
+        if (!forceRemote) {
+            val local = dao.getById(id)
+            if (local != null) return local
+        }
         
-        // Fetch from Firebase if not local
+        // Fetch from Firebase if not local or if forced
         try {
             val snapshot = dbRef.child(id).get().await()
             if (snapshot.exists()) {
@@ -28,14 +30,22 @@ class TeacherRepository(private val dao: TeacherDao) {
         } catch (e: Exception) {
             Timber.e(e, "Failed to fetch teacher from Firebase")
         }
+        
+        // Fallback to local if remote fetch fails during a force
+        if (forceRemote) {
+            return dao.getById(id)
+        }
+        
         return null
     }
 
     fun getByIdFlow(id: String): Flow<TeacherEntity?> = dao.getByIdFlow(id)
 
-    suspend fun getByUsername(username: String): TeacherEntity? {
-        val local = dao.getByUsername(username)
-        if (local != null) return local
+    suspend fun getByUsername(username: String, forceRemote: Boolean = false): TeacherEntity? {
+        if (!forceRemote) {
+            val local = dao.getByUsername(username)
+            if (local != null) return local
+        }
 
         // Fetch from Firebase
         try {
@@ -53,6 +63,11 @@ class TeacherRepository(private val dao: TeacherDao) {
         } catch (e: Exception) {
             Timber.e(e, "Failed to fetch teacher by username from Firebase")
         }
+        
+        if (forceRemote) {
+            return dao.getByUsername(username)
+        }
+
         return null
     }
 

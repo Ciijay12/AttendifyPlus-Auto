@@ -28,6 +28,7 @@ class AttendanceRepository(private val dao: AttendanceDao, private val context: 
                 "status" to entity.status,
                 "type" to entity.type,
                 "subject" to (entity.subject ?: ""),
+                "academicPeriod" to (entity.academicPeriod ?: ""),
                 "updatedAt" to System.currentTimeMillis(),
                 "deviceId" to android.os.Build.MODEL
             )
@@ -39,6 +40,57 @@ class AttendanceRepository(private val dao: AttendanceDao, private val context: 
         } catch (e: Exception) {
             Timber.e(e, "Failed to instant-push attendance. Will be picked up by SyncWorker.")
             // Do not mark as synced. SyncWorker will handle it later.
+        }
+    }
+    
+    // New sync method to pull from Firebase
+    suspend fun syncAttendance() {
+        try {
+            // Pull only recent attendance (e.g. last 30 days) or all
+            // For robustness, let's pull all for now, or filter by timestamp if too large.
+            // Assuming manageable size for this project scope.
+            
+            val snapshot = dbRef.get().await() // Or limitToLast(1000)
+            if (snapshot.exists()) {
+                val remoteList = mutableListOf<AttendanceEntity>()
+                for (child in snapshot.children) {
+                    try {
+                        // Manual mapping because Entity has ID which Firebase doesn't use as key
+                        // and Firebase structure might slightly differ
+                        val map = child.value as? Map<String, Any> ?: continue
+                        val studentId = map["studentId"] as? String ?: continue
+                        val timestamp = (map["timestamp"] as? Number)?.toLong() ?: 0L
+                        val status = map["status"] as? String ?: "present"
+                        val type = map["type"] as? String ?: "homeroom"
+                        val subject = map["subject"] as? String
+                        val academicPeriod = map["academicPeriod"] as? String
+                        
+                        // Check if exists locally
+                        val exists = dao.countByStudentAndTimestampCount(studentId, timestamp) > 0
+                        if (!exists) {
+                            remoteList.add(
+                                AttendanceEntity(
+                                    studentId = studentId,
+                                    timestamp = timestamp,
+                                    status = status,
+                                    type = type,
+                                    subject = subject,
+                                    academicPeriod = academicPeriod,
+                                    synced = true // It came from remote, so it's synced
+                                )
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Timber.e(e, "Error parsing attendance record")
+                    }
+                }
+                
+                if (remoteList.isNotEmpty()) {
+                    dao.insertAll(remoteList)
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to sync attendance from Firebase")
         }
     }
 
@@ -116,7 +168,7 @@ class AttendanceRepository(private val dao: AttendanceDao, private val context: 
 
     // Sync helper
     suspend fun exists(studentId: String, timestamp: Long): Boolean {
-        return dao.countByStudentAndTimestamp(studentId, timestamp) > 0
+        return dao.countByStudentAndTimestampCount(studentId, timestamp) > 0
     }
 
     // Last Sync Timestamp Management

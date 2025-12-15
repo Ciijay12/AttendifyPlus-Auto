@@ -19,6 +19,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.attendifyplus.data.SessionManager
 import com.attendifyplus.ui.components.GlobalUpdateHandler
 import com.attendifyplus.ui.settings.DebugSettingsScreen
 import org.koin.androidx.compose.getViewModel
@@ -170,7 +171,16 @@ fun NavHostContainer(viewModel: LoginViewModel = getViewModel()) {
         composable("export_attendance") { AttendanceExportScreen(navController = nav) }
         composable("student_export") { StudentExportScreen(navController = nav) }
         composable("manage_classes") { ManageClassesScreen(navController = nav) }
-        composable("history") { StudentHistoryScreen(navController = nav) }
+        
+        // Updated history route to supply studentId
+        composable("history") { 
+            // Fallback to SessionManager or current User if available, mostly used by Student Tab internally
+            // But if navigated directly, we need an ID. 
+            // Assuming this route is used standalone or for debugging.
+            val currentStudentId = userId ?: SessionManager.currentStudentId
+            StudentHistoryScreen(navController = nav, studentId = currentStudentId) 
+        }
+        
         composable("teachers") { TeacherListScreen(onBack = { nav.popBackStack() }, onTeacherClick = { nav.navigate("teacher_detail/$it") }) }
         composable("teacher_detail/{teacherId}") { backStackEntry ->
             TeacherDetailScreen(navController = nav, teacherId = backStackEntry.arguments?.getString("teacherId") ?: "")

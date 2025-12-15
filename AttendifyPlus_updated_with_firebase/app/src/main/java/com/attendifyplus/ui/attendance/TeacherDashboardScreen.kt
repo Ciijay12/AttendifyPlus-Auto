@@ -46,7 +46,7 @@ fun TeacherDashboardScreen(
 
     // Observe Daily Status
     val dailyStatus by viewModel.dailyStatus.collectAsState()
-    val isCalendarConfigured by viewModel.isCalendarConfigured.collectAsState()
+    
     // Observe User Name
     val userName by viewModel.userName.collectAsState()
     
@@ -254,13 +254,6 @@ fun TeacherDashboardScreen(
                             }
                         }
                     }
-                }
-
-                // Blocking Overlay for Unconfigured Calendar
-                if (!isCalendarConfigured) {
-                    SetupPromptOverlay(
-                        onNavigate = { navController.navigate("academic_periods") }
-                    )
                 }
             }
         }

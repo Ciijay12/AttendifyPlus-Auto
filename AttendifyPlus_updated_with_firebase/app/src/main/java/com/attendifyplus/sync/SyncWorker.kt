@@ -38,7 +38,8 @@ class SyncWorker(appContext: Context, params: WorkerParameters) : CoroutineWorke
             studentRepo.syncAll()
             eventRepo.syncEvents()
             periodRepo.syncPeriod()
-            subjectClassRepo.syncAll() // Added subject class sync
+            subjectClassRepo.syncAll()
+            attendanceRepo.syncAttendance() // Added attendance sync
 
             // --- 2. PUSH UNSYNCED LOCAL DATA TO REMOTE ---
             // This part handles data that was created offline and needs to be pushed up.
@@ -53,6 +54,7 @@ class SyncWorker(appContext: Context, params: WorkerParameters) : CoroutineWorke
                     "status" to local.status,
                     "type" to local.type,
                     "subject" to (local.subject ?: ""),
+                    "academicPeriod" to (local.academicPeriod ?: ""),
                     "updatedAt" to System.currentTimeMillis(),
                     "deviceId" to android.os.Build.MODEL
                 )

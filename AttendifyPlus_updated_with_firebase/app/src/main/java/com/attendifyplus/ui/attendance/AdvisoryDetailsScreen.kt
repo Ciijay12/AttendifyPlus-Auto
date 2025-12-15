@@ -45,7 +45,13 @@ fun AdvisoryDetailsDialog(
     var grade by remember(teacher) { mutableStateOf(teacher?.advisoryGrade ?: "") }
     var section by remember(teacher) { mutableStateOf(teacher?.advisorySection ?: "") }
     var startTime by remember(teacher) { mutableStateOf(teacher?.advisoryStartTime ?: "") }
-    var track by remember(teacher) { mutableStateOf(teacher?.advisoryTrack) }
+    
+    // Support multiple strands: "ABM, STEM"
+    var selectedTracks by remember(teacher) { 
+        mutableStateOf(
+            teacher?.advisoryTrack?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
+        ) 
+    }
 
     // Check if class exists to show Delete button
     val isEditing = !teacher?.advisoryGrade.isNullOrBlank()
@@ -195,10 +201,10 @@ fun AdvisoryDetailsDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         OutlinedTextField(
-                            value = track ?: "",
+                            value = selectedTracks.joinToString(", "), // Display comma-separated
                             onValueChange = { },
                             readOnly = true,
-                            label = { Text("Track / Strand") },
+                            label = { Text("Tracks / Strands (Combine)") },
                             leadingIcon = { Icon(Icons.Default.Class, contentDescription = null, tint = PrimaryBlue) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trackExpanded) },
                             modifier = Modifier.fillMaxWidth(),
@@ -219,12 +225,26 @@ fun AdvisoryDetailsDialog(
                                     Text("Configure Tracks...", color = PrimaryBlue)
                                 }
                             } else {
+                                // Multi-select support
                                 enabledTracks.sorted().forEach { option ->
-                                    DropdownMenuItem(onClick = {
-                                        track = option
-                                        trackExpanded = false
-                                    }) {
-                                        Text(option)
+                                    val isSelected = selectedTracks.contains(option)
+                                    DropdownMenuItem(
+                                        onClick = {
+                                            val newSet = selectedTracks.toMutableSet()
+                                            if (isSelected) newSet.remove(option) else newSet.add(option)
+                                            selectedTracks = newSet
+                                            // Don't close menu to allow multiple selections
+                                        }
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = isSelected,
+                                                onCheckedChange = null, // Handled by parent click
+                                                colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(option)
+                                        }
                                     }
                                 }
                             }
@@ -312,8 +332,8 @@ fun AdvisoryDetailsDialog(
                     Button(
                         onClick = { 
                             if (grade.isNotBlank() && section.isNotBlank()) {
-                                // Pass track only if SHS, else null
-                                val finalTrack = if (isShs) track else null
+                                // Join selected tracks with comma
+                                val finalTrack = if (isShs) selectedTracks.joinToString(", ") else null
                                 viewModel.saveDetails(grade, section, startTime.ifBlank { null }, finalTrack)
                                 onDismiss()
                             } else {

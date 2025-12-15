@@ -15,7 +15,8 @@ import org.koin.dsl.module
 val appModule = module {
     single {
         Room.databaseBuilder(get<Application>(), AttendifyDatabase::class.java, "attendify.db")
-            .fallbackToDestructiveMigration() // This allows DB to be cleared if schema changes
+            // Removed fallbackToDestructiveMigration() to prevent accidental data loss on updates.
+            // If schema changes in the future, a proper Migration must be provided.
             .build()
     }
 
@@ -48,7 +49,10 @@ val appModule = module {
     viewModel { AttendanceViewModel(get(), get(), get(), get(), get(), androidContext()) }
     viewModel { StudentListViewModel(get()) }
     viewModel { DashboardViewModel(get(), get(), get(), get(), get(), get()) } // Added UpdateManager
-    viewModel { StudentHistoryViewModel(get()) }
+    
+    // Updated StudentHistoryViewModel with more dependencies for robust filtering
+    viewModel { (studentId: String) -> StudentHistoryViewModel(get(), get(), get(), studentId) }
+    
     // Updated to inject context for Session Management
     viewModel { LoginViewModel(get(), get(), androidContext()) }
     viewModel { SubjectClassViewModel(get(), get(), androidContext()) } // Updated to inject TeacherRepository and Context

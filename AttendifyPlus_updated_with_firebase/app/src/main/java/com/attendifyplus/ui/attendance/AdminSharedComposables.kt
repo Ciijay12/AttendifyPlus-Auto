@@ -476,7 +476,41 @@ fun AddStudentPremiumDialog(
                         icon = Icons.Default.Person
                     )
 
-                    Spacer(Modifier.height(32.dp))
+                    Spacer(Modifier.height(16.dp))
+
+                    // INSTRUCTIONAL TEXT ADDED HERE
+                    if (!isEditing) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = PrimaryBlue.copy(alpha = 0.1f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Info, 
+                                    contentDescription = null, 
+                                    tint = PrimaryBlue,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "Login Credentials:",
+                                        style = MaterialTheme.typography.caption.copy(fontWeight = FontWeight.Bold, color = PrimaryBlue)
+                                    )
+                                    Text(
+                                        text = "Default Username and Password is the Student ID ($studentId).",
+                                        style = MaterialTheme.typography.caption.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f))
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(24.dp))
 
                     Row(modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(

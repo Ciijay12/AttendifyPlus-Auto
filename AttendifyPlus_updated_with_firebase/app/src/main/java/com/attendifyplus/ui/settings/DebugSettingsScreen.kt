@@ -116,6 +116,7 @@ fun DebugSettingsScreen(
         scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(
+                modifier = Modifier.statusBarsPadding(),
                 title = { Text("Debug Settings") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {

@@ -11,6 +11,9 @@ interface AttendanceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(attendances: List<AttendanceEntity>)
+    
+    @Update
+    suspend fun update(attendance: AttendanceEntity)
 
     @Query("SELECT * FROM attendance WHERE synced = 0")
     suspend fun getUnsynced(): List<AttendanceEntity>
@@ -32,6 +35,9 @@ interface AttendanceDao {
 
     @Query("SELECT * FROM attendance WHERE studentId = :studentId ORDER BY timestamp DESC")
     fun getHistoryByStudent(studentId: String): Flow<List<AttendanceEntity>>
+    
+    @Query("SELECT * FROM attendance WHERE studentId = :studentId AND timestamp = :timestamp LIMIT 1")
+    suspend fun getByStudentAndTimestamp(studentId: String, timestamp: Long): AttendanceEntity?
     
     @Query("SELECT * FROM attendance WHERE studentId = :studentId AND subject = :subjectName AND timestamp BETWEEN :dayStart AND :dayEnd LIMIT 1")
     suspend fun getAttendanceForSubjectOnDay(studentId: String, subjectName: String, dayStart: Long, dayEnd: Long): AttendanceEntity?
@@ -95,5 +101,5 @@ interface AttendanceDao {
 
     // Helper to check existence for sync
     @Query("SELECT COUNT(*) FROM attendance WHERE studentId = :studentId AND timestamp = :timestamp")
-    suspend fun countByStudentAndTimestamp(studentId: String, timestamp: Long): Int
+    suspend fun countByStudentAndTimestampCount(studentId: String, timestamp: Long): Int
 }
