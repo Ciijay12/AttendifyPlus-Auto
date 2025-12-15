@@ -30,7 +30,7 @@ import com.attendifyplus.data.local.entities.AdminSubjectEntity
         SchoolCalendarConfigEntity::class,
         AdminSubjectEntity::class
     ], 
-    version = 22, 
+    version = 23, 
     exportSchema = false
 )
 abstract class AttendifyDatabase : RoomDatabase() {

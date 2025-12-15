@@ -60,7 +60,7 @@ fun TeacherDashboard(
 ) {
     val dailyStatus by viewModel.dailyStatus.collectAsState()
     val subjectClasses by viewModel.subjectClasses.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val syncState by viewModel.syncState.collectAsState()
     
     val windowInfo = LocalWindowInfo.current
     val isWideScreen = windowInfo.screenWidthInfo is WindowInfo.WindowType.Medium ||
@@ -141,13 +141,14 @@ fun TeacherDashboard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Good Day, ${if (userName.isNotBlank()) userName else "Teacher"}!",
                         style = MaterialTheme.typography.h5.copy(
                             fontWeight = FontWeight.Bold,
                             color = Color.White
-                        )
+                        ),
+                        maxLines = 1
                     )
                     Text(
                         text = currentDate,
@@ -158,22 +159,9 @@ fun TeacherDashboard(
                 }
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (isRefreshing) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                    }
+                    SyncButton(syncState = syncState, onSync = { viewModel.refresh(force = true) })
                     
-                    IconButton(onClick = { viewModel.refresh() }) {
-                         Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            tint = Color.White
-                        )
-                    }
+                    Spacer(Modifier.width(8.dp))
 
                     // Profile / Settings Icon
                     Surface(

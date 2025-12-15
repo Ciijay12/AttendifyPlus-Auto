@@ -60,6 +60,11 @@ class AttendanceViewModel(
 
     private suspend fun determineAcademicPeriod(timestamp: Long, isJhs: Boolean): String? {
         val period = schoolPeriodRepo.periodFlow.firstOrNull() ?: return null
+        
+        // Helper to get effective start/end (Fallback to standard dates if SHS specific dates are 0)
+        fun getStart(shsVal: Long, stdVal: Long) = if (shsVal > 0) shsVal else stdVal
+        fun getEnd(shsVal: Long, stdVal: Long) = if (shsVal > 0) shsVal else stdVal
+
         return when {
             isJhs -> when (timestamp) {
                 in period.q1Start..period.q1End -> "Q1"
@@ -68,11 +73,11 @@ class AttendanceViewModel(
                 in period.q4Start..period.q4End -> "Q4"
                 else -> null
             }
-            else -> when (timestamp) { // SHS
-                in period.shsQ1Start..period.shsQ1End -> "Q1"
-                in period.shsQ2Start..period.shsQ2End -> "Q2"
-                in period.shsQ3Start..period.shsQ3End -> "Q3"
-                in period.shsQ4Start..period.shsQ4End -> "Q4"
+            else -> when (timestamp) { // SHS or Undetermined (Fallback to SHS/General logic)
+                in getStart(period.shsQ1Start, period.q1Start)..getEnd(period.shsQ1End, period.q1End) -> "Q1"
+                in getStart(period.shsQ2Start, period.q2Start)..getEnd(period.shsQ2End, period.q2End) -> "Q2"
+                in getStart(period.shsQ3Start, period.q3Start)..getEnd(period.shsQ3End, period.q3End) -> "Q3"
+                in getStart(period.shsQ4Start, period.q4Start)..getEnd(period.shsQ4End, period.q4End) -> "Q4"
                 else -> null
             }
         }
@@ -89,8 +94,19 @@ class AttendanceViewModel(
                      _scanState.value = ScanState.Error("Student not found")
                      return@launch
                 }
+                
+                if (subjectName != null && attendanceRepo.hasAttendanceForSubjectOnDay(studentId, subjectName)) {
+                    _scanState.value = ScanState.Error("Already marked for this class today")
+                    return@launch
+                }
 
-                val isJhs = student.grade.toIntOrNull() in 7..10
+                // Robust grade parsing: Remove non-digits to handle "Grade 7" etc.
+                val gradeInt = student.grade.filter { it.isDigit() }.toIntOrNull()
+                // Default to JHS if parsing fails (safe default for 1-10) or if explicitly <= 10
+                // If it is > 10, it's SHS.
+                // If grade is "Kinder" (no digits), gradeInt is null. We treat as JHS (General) calendar.
+                val isJhs = gradeInt == null || gradeInt <= 10
+                
                 val academicPeriod = determineAcademicPeriod(now, isJhs)
 
                 if (academicPeriod == null) {
@@ -148,8 +164,14 @@ class AttendanceViewModel(
                 _message.value = "Error: Student '$studentIdentifier' not found"
                 return@launch
             }
+            
+            if (subjectName != null && attendanceRepo.hasAttendanceForSubjectOnDay(student.id, subjectName)) {
+                _message.value = "Error: Already marked for this class today"
+                return@launch
+            }
 
-            val isJhs = student.grade.toIntOrNull() in 7..10
+            val gradeInt = student.grade.filter { it.isDigit() }.toIntOrNull()
+            val isJhs = gradeInt == null || gradeInt <= 10
             val academicPeriod = determineAcademicPeriod(timestamp, isJhs)
 
             if (academicPeriod == null) {
@@ -214,7 +236,8 @@ class AttendanceViewModel(
 
                 // 4. Mark them as absent
                 val now = System.currentTimeMillis()
-                val isJhs = grade.toIntOrNull() in 7..10
+                val gradeInt = grade.filter { it.isDigit() }.toIntOrNull()
+                val isJhs = gradeInt == null || gradeInt <= 10
                 val academicPeriod = determineAcademicPeriod(now, isJhs) ?: "Q1" // Fallback if period not set
 
                 var markedCount = 0

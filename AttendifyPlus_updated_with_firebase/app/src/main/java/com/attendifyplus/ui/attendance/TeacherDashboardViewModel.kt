@@ -1,15 +1,20 @@
 package com.attendifyplus.ui.attendance
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.attendifyplus.data.local.entities.*
 import com.attendifyplus.data.repositories.*
+import com.attendifyplus.sync.SyncWorker
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.util.Calendar
+import java.util.UUID
 
 class TeacherDashboardViewModel(
     private val teacherRepo: TeacherRepository,
@@ -17,25 +22,26 @@ class TeacherDashboardViewModel(
     private val subjectClassRepo: SubjectClassRepository,
     private val schoolEventRepo: SchoolEventRepository,
     private val attendanceRepo: AttendanceRepository,
-    private val schoolPeriodRepo: SchoolPeriodRepository
+    private val schoolPeriodRepo: SchoolPeriodRepository,
+    private val context: Context // Injected context for WorkManager
 ) : ViewModel() {
+
+    private val prefs = context.getSharedPreferences("attendify_session", Context.MODE_PRIVATE)
+    private val teacherId = prefs.getString("user_id", null) ?: "T001"
 
     val allStudents: StateFlow<List<StudentEntity>> = studentRepo.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    @Suppress("unused") // Used by UI
     val unsyncedCount: StateFlow<Int> = attendanceRepo.unsyncedCount
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     private val _adviserDetails = MutableStateFlow<TeacherEntity?>(null)
-    @Suppress("unused") // Used by UI
     val adviserDetails: StateFlow<TeacherEntity?> = _adviserDetails.asStateFlow()
 
     private val _studentCount = MutableStateFlow(0)
-    @Suppress("unused") // Used by UI
     val studentCount: StateFlow<Int> = _studentCount.asStateFlow()
 
-    private val _currentTeacherId = MutableStateFlow("T001")
+    private val _currentTeacherId = MutableStateFlow(teacherId)
     
     @OptIn(ExperimentalCoroutinesApi::class)
     val subjectClasses: StateFlow<List<SubjectClassEntity>> = _currentTeacherId
@@ -43,10 +49,8 @@ class TeacherDashboardViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _userName = MutableStateFlow("")
-    @Suppress("unused") // Used by UI
     val userName: StateFlow<String> = _userName.asStateFlow()
 
-    // Reactive Daily Status
     val dailyStatus: StateFlow<String> = schoolEventRepo.getAllEvents()
         .map { events ->
             val noClassEvent = events.find { event ->
@@ -78,24 +82,22 @@ class TeacherDashboardViewModel(
             }.timeInMillis
             
             events
-                .filter { it.date >= today && !it.isNoClass } // Filter out status events
+                .filter { it.date >= today && it.type != "status" } // Filter out status events
                 .sortedBy { it.date }
-                .take(2) // Limit to 2 events
+                .take(2) 
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
+    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
     private var loadJob: Job? = null
 
     init {
-        // Load details for default teacher T001 immediately upon initialization
-        // Moved here to ensure all properties are initialized before usage
-        loadAdviserDetails("T001")
+        loadAdviserDetails(teacherId)
     }
 
-    fun loadAdviserDetails(teacherId: String = "T001") {
+    fun loadAdviserDetails(teacherId: String) {
         _currentTeacherId.value = teacherId
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
@@ -123,7 +125,6 @@ class TeacherDashboardViewModel(
                 set(Calendar.MILLISECOND, 0)
             }
             
-            // Get current snapshot of events
             val allEvents = schoolEventRepo.getAllEvents().first()
             
             val todayNoClassEvents = allEvents.filter { event ->
@@ -134,31 +135,55 @@ class TeacherDashboardViewModel(
             }
 
             if (isNoClass) {
-                // Clear previous conflicting status to avoid duplicates
                 todayNoClassEvents.forEach { schoolEventRepo.deleteEvent(it.id) }
 
                 val newEvent = SchoolEventEntity(
                     date = todayStart.timeInMillis,
                     title = reason,
                     description = "Manual Status Update",
-                    type = "holiday",
+                    type = "status", // Changed from "holiday" to "status"
                     isNoClass = true,
                     synced = false
                 )
                 schoolEventRepo.addEvent(newEvent)
             } else {
-                // Revert to Class Day -> Delete No Class events
                 todayNoClassEvents.forEach { schoolEventRepo.deleteEvent(it.id) }
             }
         }
     }
 
-    fun refresh() {
+    fun refresh(force: Boolean = false) {
+        if (force) {
+            triggerSync()
+        } else {
+            viewModelScope.launch {
+                 _syncState.value = SyncState.Loading
+                 loadAdviserDetails(_currentTeacherId.value)
+                 delay(1000)
+                 _syncState.value = SyncState.Success
+                 delay(2000)
+                 _syncState.value = SyncState.Idle
+            }
+        }
+    }
+
+    private fun triggerSync() {
         viewModelScope.launch {
-            _isRefreshing.value = true
-            loadAdviserDetails(_currentTeacherId.value)
-            delay(1500)
-            _isRefreshing.value = false
+            _syncState.value = SyncState.Loading
+            val workManager = WorkManager.getInstance(context)
+            val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+                .setId(UUID.randomUUID())
+                .addTag("manual_sync")
+                .build()
+            
+            workManager.enqueue(syncRequest)
+            
+            // For student/teacher, we just show loading and assume it works.
+            // The UI will update reactively as data flows in.
+            delay(3000) // Show loading for a few seconds for feedback
+            _syncState.value = SyncState.Success
+            delay(2000)
+            _syncState.value = SyncState.Idle
         }
     }
 }

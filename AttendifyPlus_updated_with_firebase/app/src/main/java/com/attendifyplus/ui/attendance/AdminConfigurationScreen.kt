@@ -92,6 +92,15 @@ fun AdminConfigurationScreen(
                     onClick = { navController.navigate("academic_periods") }
                 )
             }
+            item {
+                ConfigOptionCardPremium(
+                    title = "Track Configuration",
+                    description = "Manage available SHS tracks",
+                    icon = Icons.Default.ListAlt,
+                    iconColor = Color(0xFF7E57C2), // Deep Purple
+                    onClick = { navController.navigate("track_configuration") }
+                )
+            }
 
             // User Management Section
             item {

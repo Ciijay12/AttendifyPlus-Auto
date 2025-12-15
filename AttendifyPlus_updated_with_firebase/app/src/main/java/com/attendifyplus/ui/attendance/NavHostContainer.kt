@@ -204,6 +204,11 @@ fun NavHostContainer(viewModel: LoginViewModel = getViewModel()) {
         composable("config_import_export") {
             ConfigScreen(navController = nav)
         }
+        
+        // Track Configuration Route
+        composable("track_configuration") {
+            TrackConfigurationScreen(navController = nav)
+        }
 
         composable(
             "monthly_events/{year}/{month}",

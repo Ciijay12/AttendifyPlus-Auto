@@ -3,15 +3,7 @@ package com.attendifyplus.di
 import android.app.Application
 import androidx.room.Room
 import com.attendifyplus.data.local.AttendifyDatabase
-import com.attendifyplus.data.repositories.AttendanceRepository
-import com.attendifyplus.data.repositories.SchoolCalendarConfigRepository
-import com.attendifyplus.data.repositories.SchoolEventRepository
-import com.attendifyplus.data.repositories.SchoolPeriodRepository
-import com.attendifyplus.data.repositories.StudentRepository
-import com.attendifyplus.data.repositories.SubjectClassRepository
-import com.attendifyplus.data.repositories.TeacherRepository
-import com.attendifyplus.data.repositories.AdminSubjectRepository
-import com.attendifyplus.data.repositories.SyncRepository
+import com.attendifyplus.data.repositories.*
 import com.attendifyplus.ui.attendance.*
 import com.attendifyplus.ui.settings.DebugSettingsViewModel
 import com.attendifyplus.util.NotificationHelper
@@ -56,7 +48,7 @@ val appModule = module {
     // Updated to inject context for Session Management
     viewModel { LoginViewModel(get(), get(), androidContext()) }
     viewModel { SubjectClassViewModel(get(), get(), androidContext()) } // Updated to inject TeacherRepository and Context
-    viewModel { AdvisoryDetailsViewModel(get()) }
+    viewModel { AdvisoryDetailsViewModel(get(), androidContext()) } // Updated to inject Context
     viewModel { ClassDashboardViewModel(get(), get()) }
     viewModel { TeacherListViewModel(get(), get()) } // Injecting StudentRepository as well
     viewModel { TeacherDetailViewModel(get(), get()) }
@@ -67,8 +59,9 @@ val appModule = module {
     viewModel { (year: Int, month: Int) -> MonthlyEventsViewModel(get(), year, month) }
     
     // New Role-Based ViewModels
-    viewModel { StudentDashboardViewModel(get(), get(), get(), get(), get()) }
-    viewModel { TeacherDashboardViewModel(get(), get(), get(), get(), get(), get()) }
+    // Fixed: Added the missing get() for TeacherRepository in StudentDashboardViewModel (6 get() calls + context)
+    viewModel { StudentDashboardViewModel(get(), get(), get(), get(), get(), get(), androidContext()) }
+    viewModel { TeacherDashboardViewModel(get(), get(), get(), get(), get(), get(), androidContext()) }
     viewModel { AdminDashboardViewModel(get(), get(), get(), get(), get(), androidContext()) }
     
     // Feature 1: Retroactive Attendance ViewModel

@@ -259,7 +259,7 @@ fun ManageClassesScreen(
                                         filteredSections.forEach { sec ->
                                             DropdownMenuItem(onClick = {
                                                 section = sec.section
-                                                trackAndStrand = sec.track
+                                                trackAndStrand = sec.track // Auto-populate with Advisory Track (likely comma-sep)
                                                 sectionExpanded = false
                                             }) {
                                                 Column {
@@ -280,20 +280,22 @@ fun ManageClassesScreen(
                         Spacer(Modifier.height(16.dp))
                         Text("Track and Strand", style = MaterialTheme.typography.caption.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f), fontWeight = FontWeight.Bold))
                         Spacer(Modifier.height(4.dp))
+                        // Allow editing of track for Teacher creation as well, in case they want to override or it was auto-populated
                         OutlinedTextField(
-                            value = trackAndStrand ?: "None",
-                            onValueChange = { },
-                            readOnly = true,
-                            enabled = false, // Auto-populated from section
+                            value = trackAndStrand ?: "",
+                            onValueChange = { trackAndStrand = it },
+                            label = { Text("Strand (e.g. STEM, ABM)") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = TextFieldDefaults.outlinedTextFieldColors(
-                                backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.5f),
+                                focusedBorderColor = PrimaryBlue,
+                                unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.3f),
+                                backgroundColor = MaterialTheme.colors.surface,
                                 textColor = MaterialTheme.colors.onSurface
                             )
                         )
                         Text(
-                            text = "Auto-selected based on section",
+                            text = "Auto-filled from Advisory, but editable",
                             style = MaterialTheme.typography.caption,
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.5f),
                             modifier = Modifier.padding(start = 4.dp, top = 2.dp)

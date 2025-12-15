@@ -59,6 +59,7 @@ fun AdminAdvisoryDetailScreen(
     
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
+    var showClassSettingsDialog by remember { mutableStateOf(false) } // For editing class details
     var studentToEdit by remember { mutableStateOf<StudentEntity?>(null) }
     
     // Helper to get advisory class info
@@ -108,6 +109,21 @@ fun AdminAdvisoryDetailScreen(
             initialStudent = studentToEdit
         )
     }
+    
+    // Dialog for editing class details (tracks, etc.)
+    if (showClassSettingsDialog && currentAdvisoryClass != null) {
+        // We need a specific ViewModel instance for this teacher to edit their class
+        val advisoryVm: AdvisoryDetailsViewModel = getViewModel()
+        // Load the specific teacher data
+        LaunchedEffect(currentAdvisoryClass.teacherId) {
+            advisoryVm.loadTeacher(currentAdvisoryClass.teacherId)
+        }
+        
+        AdvisoryDetailsDialog(
+            onDismiss = { showClassSettingsDialog = false },
+            viewModel = advisoryVm
+        )
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -152,6 +168,16 @@ fun AdminAdvisoryDetailScreen(
                                 Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                             }
                             Spacer(Modifier.weight(1f))
+                            
+                            // Edit Class Button (Gear Icon)
+                            if (currentAdvisoryClass != null) {
+                                IconButton(
+                                    onClick = { showClassSettingsDialog = true },
+                                    modifier = Modifier.size(32.dp).background(Color.White.copy(alpha = 0.2f), CircleShape)
+                                ) {
+                                    Icon(Icons.Default.Settings, contentDescription = "Edit Class", tint = Color.White)
+                                }
+                            }
                         }
                         
                         Spacer(Modifier.height(24.dp))

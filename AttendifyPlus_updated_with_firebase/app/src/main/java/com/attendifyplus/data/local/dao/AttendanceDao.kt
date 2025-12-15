@@ -32,6 +32,9 @@ interface AttendanceDao {
 
     @Query("SELECT * FROM attendance WHERE studentId = :studentId ORDER BY timestamp DESC")
     fun getHistoryByStudent(studentId: String): Flow<List<AttendanceEntity>>
+    
+    @Query("SELECT * FROM attendance WHERE studentId = :studentId AND subject = :subjectName AND timestamp BETWEEN :dayStart AND :dayEnd LIMIT 1")
+    suspend fun getAttendanceForSubjectOnDay(studentId: String, subjectName: String, dayStart: Long, dayEnd: Long): AttendanceEntity?
 
     // History for a specific subject class
     @Query("SELECT * FROM attendance WHERE subject = :subjectName ORDER BY timestamp DESC")

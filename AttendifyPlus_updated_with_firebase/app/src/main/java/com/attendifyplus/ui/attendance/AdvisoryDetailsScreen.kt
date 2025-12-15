@@ -6,12 +6,15 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Class
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +31,7 @@ import com.attendifyplus.ui.theme.SecondaryTeal
 import org.koin.androidx.compose.getViewModel
 import java.util.Calendar
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun AdvisoryDetailsDialog(
     onDismiss: () -> Unit,
@@ -35,17 +39,22 @@ fun AdvisoryDetailsDialog(
 ) {
     val context = LocalContext.current
     val teacher by viewModel.teacher.collectAsState()
+    val enabledTracks by viewModel.enabledTracks.collectAsState()
     
     // State derived from teacher but editable
     var grade by remember(teacher) { mutableStateOf(teacher?.advisoryGrade ?: "") }
     var section by remember(teacher) { mutableStateOf(teacher?.advisorySection ?: "") }
     var startTime by remember(teacher) { mutableStateOf(teacher?.advisoryStartTime ?: "") }
+    var track by remember(teacher) { mutableStateOf(teacher?.advisoryTrack) }
 
     // Check if class exists to show Delete button
     val isEditing = !teacher?.advisoryGrade.isNullOrBlank()
+    val isShs = grade == "11" || grade == "12"
     
     // State for delete confirmation
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showTrackConfigDialog by remember { mutableStateOf(false) }
+    var trackExpanded by remember { mutableStateOf(false) }
 
     // Gradient for Premium Look
     val premiumGradient = Brush.horizontalGradient(
@@ -78,6 +87,48 @@ fun AdvisoryDetailsDialog(
         )
     }
 
+    if (showTrackConfigDialog) {
+        Dialog(onDismissRequest = { showTrackConfigDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                elevation = 8.dp,
+                modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp),
+                backgroundColor = MaterialTheme.colors.surface
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text("Configure Tracks", style = MaterialTheme.typography.h6.copy(fontWeight = FontWeight.Bold, color = PrimaryBlue))
+                    Spacer(Modifier.height(16.dp))
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val allPossibleTracks = listOf("ABM", "HUMSS", "STEM", "GAS", "AFA", "HE", "IA", "ICT", "Arts and Design", "Sports")
+                        items(allPossibleTracks) { item ->
+                            val isChecked = enabledTracks.contains(item)
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { viewModel.toggleTrack(item, !isChecked) },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = isChecked,
+                                    onCheckedChange = { viewModel.toggleTrack(item, it) },
+                                    colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue)
+                                )
+                                Text(item, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { showTrackConfigDialog = false },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = PillShape,
+                        colors = ButtonDefaults.buttonColors(backgroundColor = PrimaryBlue)
+                    ) {
+                        Text("Done", color = Color.White)
+                    }
+                }
+            }
+        }
+    }
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(24.dp),
@@ -93,13 +144,24 @@ fun AdvisoryDetailsDialog(
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = if (isEditing) "Edit Advisory Class" else "Setup Advisory Class",
-                    style = MaterialTheme.typography.h6.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryBlue
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isEditing) "Edit Advisory Class" else "Setup Advisory Class",
+                        style = MaterialTheme.typography.h6.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryBlue
+                        )
                     )
-                )
+                    if (isShs) {
+                        IconButton(onClick = { showTrackConfigDialog = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Configure Tracks", tint = MaterialTheme.colors.onSurface.copy(alpha = 0.5f))
+                        }
+                    }
+                }
                 
                 Spacer(Modifier.height(24.dp))
 
@@ -125,6 +187,51 @@ fun AdvisoryDetailsDialog(
                 )
                 
                 Spacer(Modifier.height(16.dp))
+                
+                if (isShs) {
+                    ExposedDropdownMenuBox(
+                        expanded = trackExpanded,
+                        onExpandedChange = { trackExpanded = !trackExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = track ?: "",
+                            onValueChange = { },
+                            readOnly = true,
+                            label = { Text("Track / Strand") },
+                            leadingIcon = { Icon(Icons.Default.Class, contentDescription = null, tint = PrimaryBlue) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trackExpanded) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = TextFieldDefaults.outlinedTextFieldColors(
+                                focusedBorderColor = PrimaryBlue,
+                                unfocusedBorderColor = MaterialTheme.colors.onSurface.copy(alpha = 0.3f),
+                                backgroundColor = MaterialTheme.colors.surface,
+                                textColor = MaterialTheme.colors.onSurface
+                            )
+                        )
+                        ExposedDropdownMenu(
+                            expanded = trackExpanded,
+                            onDismissRequest = { trackExpanded = false }
+                        ) {
+                            if (enabledTracks.isEmpty()) {
+                                DropdownMenuItem(onClick = { showTrackConfigDialog = true }) {
+                                    Text("Configure Tracks...", color = PrimaryBlue)
+                                }
+                            } else {
+                                enabledTracks.sorted().forEach { option ->
+                                    DropdownMenuItem(onClick = {
+                                        track = option
+                                        trackExpanded = false
+                                    }) {
+                                        Text(option)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
                 
                 OutlinedTextField(
                     value = section,
@@ -176,17 +283,6 @@ fun AdvisoryDetailsDialog(
                         backgroundColor = MaterialTheme.colors.surface
                     )
                 )
-                
-                // Since OutlinedTextField with enabled=false consumes clicks differently, 
-                // sometimes it's better to wrap it or put a transparent box on top.
-                // Let's correct the clickable behavior by using a Box over it if needed, 
-                // but standard clickable on Modifier usually works if the inner field doesn't steal focus.
-                // However, a safer approach for a read-only picker:
-                
-                // Alternative simpler UI for Time:
-                /*
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { ... }) { ... }
-                */
 
                 Spacer(Modifier.height(32.dp))
 
@@ -216,7 +312,9 @@ fun AdvisoryDetailsDialog(
                     Button(
                         onClick = { 
                             if (grade.isNotBlank() && section.isNotBlank()) {
-                                viewModel.saveDetails(grade, section, startTime.ifBlank { null })
+                                // Pass track only if SHS, else null
+                                val finalTrack = if (isShs) track else null
+                                viewModel.saveDetails(grade, section, startTime.ifBlank { null }, finalTrack)
                                 onDismiss()
                             } else {
                                 Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()

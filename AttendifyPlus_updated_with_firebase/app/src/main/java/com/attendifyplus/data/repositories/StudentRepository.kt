@@ -187,4 +187,24 @@ class StudentRepository(private val dao: StudentDao) {
     }
 
     suspend fun countByClass(grade: String, section: String) = dao.countByClass(grade, section)
+
+    suspend fun syncAll() {
+        try {
+            val snapshot = dbRef.get().await()
+            if (snapshot.exists()) {
+                val remoteStudents = mutableListOf<StudentEntity>()
+                for (child in snapshot.children) {
+                    val remote = child.getValue(StudentEntity::class.java)
+                    if (remote != null) {
+                        remoteStudents.add(remote)
+                    }
+                }
+                if (remoteStudents.isNotEmpty()) {
+                    dao.insertAll(remoteStudents)
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to sync students from Firebase")
+        }
+    }
 }

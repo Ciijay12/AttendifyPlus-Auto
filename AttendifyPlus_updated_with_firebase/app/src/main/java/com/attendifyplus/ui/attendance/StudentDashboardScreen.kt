@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -24,11 +26,14 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.attendifyplus.ui.components.InformationBoardCard
 import com.attendifyplus.ui.theme.DeepPurple
+import com.attendifyplus.ui.theme.PillShape
 import com.attendifyplus.ui.theme.PrimaryBlue
 import com.attendifyplus.ui.theme.RoyalIndigo
+import com.attendifyplus.ui.theme.SecondaryTeal
 import com.attendifyplus.util.QRGenerator
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.getViewModel
@@ -56,7 +61,7 @@ fun StudentDashboardScreen(
     val studentGradeSection by viewModel.studentGradeSection.collectAsState()
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val currentPeriod by viewModel.schoolPeriod.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val syncState by viewModel.syncState.collectAsState()
     
     var qrCodeBitmap by remember { mutableStateOf<Bitmap?>(null) }
     
@@ -193,13 +198,14 @@ fun StudentDashboardScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Good Day, $userName!",
                                     style = MaterialTheme.typography.h5.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
-                                    )
+                                    ),
+                                    maxLines = 1,
                                 )
                                 if (studentGradeSection.isNotBlank()) {
                                     Text(
@@ -218,23 +224,10 @@ fun StudentDashboardScreen(
                             }
                             
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                 if (isRefreshing) {
-                                    CircularProgressIndicator(
-                                        color = Color.White,
-                                        strokeWidth = 2.dp,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                }
+                                SyncButton(syncState = syncState, onSync = { viewModel.refresh(force = true) })
                                 
-                                IconButton(onClick = { viewModel.refresh() }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = "Refresh",
-                                        tint = Color.White
-                                    )
-                                }
-                                
+                                Spacer(Modifier.width(8.dp))
+
                                 // Profile / Settings Icon
                                 Surface(
                                     shape = androidx.compose.foundation.shape.CircleShape,
@@ -285,26 +278,18 @@ fun StudentDashboardScreen(
                                             color = MaterialTheme.colors.onBackground.copy(alpha = 0.6f)
                                         )
                                     } else {
-                                        Card(
-                                            shape = RoundedCornerShape(16.dp),
-                                            elevation = 2.dp,
-                                            backgroundColor = MaterialTheme.colors.surface,
-                                            modifier = Modifier.fillMaxWidth().weight(1f)
+                                        // Removed Card wrapper to allow items to have own elevation
+                                        LazyColumn(
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp), // Added padding for shadow
+                                            verticalArrangement = Arrangement.spacedBy(12.dp) // Spacing between cards
                                         ) {
-                                            LazyColumn(
-                                                contentPadding = PaddingValues(horizontal = 8.dp)
-                                            ) {
-                                                items(subjectClassesWithStatus.size) { index ->
-                                                    val subjectWithStatus = subjectClassesWithStatus[index]
-                                                    ClassCard(
-                                                        subjectClass = subjectWithStatus.subject, 
-                                                        status = subjectWithStatus.status,
-                                                        onClick = { }
-                                                    )
-                                                    if (index < subjectClassesWithStatus.size - 1) {
-                                                        Divider(modifier = Modifier.padding(horizontal = 8.dp), color = MaterialTheme.colors.onSurface.copy(alpha = 0.1f))
-                                                    }
-                                                }
+                                            items(subjectClassesWithStatus) { subjectWithStatus ->
+                                                ClassCard(
+                                                    subjectClass = subjectWithStatus.subject, 
+                                                    status = subjectWithStatus.status,
+                                                    teacherName = subjectWithStatus.teacherName,
+                                                    onClick = { }
+                                                )
                                             }
                                         }
                                     }
@@ -328,32 +313,29 @@ fun StudentDashboardScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             
                             if (subjectClassesWithStatus.isEmpty()) {
-                                Text(
-                                    text = "No classes enrolled yet.",
-                                    style = MaterialTheme.typography.body1,
-                                    color = MaterialTheme.colors.onBackground.copy(alpha = 0.6f)
-                                )
-                            } else {
-                                Card(
-                                    shape = RoundedCornerShape(16.dp),
-                                    elevation = 2.dp,
-                                    backgroundColor = MaterialTheme.colors.surface,
-                                    modifier = Modifier.fillMaxWidth().weight(1f)
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    LazyColumn(
-                                        contentPadding = PaddingValues(horizontal = 8.dp)
-                                    ) {
-                                        items(subjectClassesWithStatus.size) { index ->
-                                            val subjectWithStatus = subjectClassesWithStatus[index]
-                                            ClassCard(
-                                                subjectClass = subjectWithStatus.subject, 
-                                                status = subjectWithStatus.status,
-                                                onClick = { }
-                                            )
-                                            if (index < subjectClassesWithStatus.size - 1) {
-                                                Divider(modifier = Modifier.padding(horizontal = 8.dp), color = MaterialTheme.colors.onSurface.copy(alpha = 0.1f))
-                                            }
-                                        }
+                                    Text(
+                                        text = "No classes enrolled yet.",
+                                        style = MaterialTheme.typography.body1,
+                                        color = MaterialTheme.colors.onBackground.copy(alpha = 0.6f)
+                                    )
+                                }
+                            } else {
+                                // Removed outer Card to let individual items shine
+                                LazyColumn(
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(subjectClassesWithStatus) { subjectWithStatus ->
+                                        ClassCard(
+                                            subjectClass = subjectWithStatus.subject, 
+                                            status = subjectWithStatus.status,
+                                            teacherName = subjectWithStatus.teacherName,
+                                            onClick = { }
+                                        )
                                     }
                                 }
                             }
@@ -447,40 +429,86 @@ fun StudentDashboardScreen(
 fun ClassCard(
     subjectClass: com.attendifyplus.data.local.entities.SubjectClassEntity,
     status: String,
+    teacherName: String,
     onClick: () -> Unit
 ) {
     val statusColor = when (status.lowercase()) {
         "present" -> SuccessGreen
         "late" -> WarningYellow
         "absent" -> Color.Red
-        else -> MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+        else -> MaterialTheme.colors.onSurface.copy(alpha = 0.4f)
     }
     
+    val statusText = when (status.lowercase()) {
+        "unmarked" -> "Not Marked"
+        else -> status.replaceFirstChar { it.uppercase() }
+    }
+    
+    val statusBg = statusColor.copy(alpha = 0.1f)
+
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        elevation = 0.dp,
-        backgroundColor = Color.Transparent
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        elevation = 4.dp, // Increased elevation for pop
+        backgroundColor = MaterialTheme.colors.surface
     ) {
         Row(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Icon / Initial
+            Surface(
+                shape = CircleShape,
+                color = PrimaryBlue.copy(alpha = 0.1f),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = subjectClass.subjectName.firstOrNull()?.toString() ?: "?",
+                        style = MaterialTheme.typography.h6.copy(fontWeight = FontWeight.Bold, color = PrimaryBlue)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = subjectClass.subjectName,
-                    style = MaterialTheme.typography.body1.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colors.onSurface)
                 )
+                Spacer(Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Person, null, tint = MaterialTheme.colors.onSurface.copy(alpha = 0.5f), modifier = Modifier.size(12.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = teacherName,
+                        style = MaterialTheme.typography.caption.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f))
+                    )
+                }
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = "${subjectClass.gradeLevel} - ${subjectClass.section}",
-                    style = MaterialTheme.typography.body2.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f))
+                    style = MaterialTheme.typography.caption.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.4f))
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = status.replaceFirstChar { it.uppercase() },
-                color = statusColor,
-                style = MaterialTheme.typography.body2.copy(fontWeight = FontWeight.Bold)
-            )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            // Status Chip
+            Surface(
+                color = statusBg,
+                shape = PillShape
+            ) {
+                Text(
+                    text = statusText,
+                    color = statusColor,
+                    style = MaterialTheme.typography.caption.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
         }
     }
 }

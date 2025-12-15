@@ -17,6 +17,10 @@ interface SubjectClassDao {
 
     @Query("SELECT * FROM subject_classes")
     fun getAllClasses(): List<SubjectClassEntity>
+    
+    // Added Flow version for reactive all-class observation
+    @Query("SELECT * FROM subject_classes")
+    fun getAllClassesFlow(): Flow<List<SubjectClassEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(subjectClass: SubjectClassEntity)

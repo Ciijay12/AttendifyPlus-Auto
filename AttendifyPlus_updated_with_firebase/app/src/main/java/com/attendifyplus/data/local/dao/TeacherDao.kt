@@ -18,6 +18,9 @@ interface TeacherDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(teacher: TeacherEntity)
     
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(teachers: List<TeacherEntity>)
+
     @Query("SELECT * FROM teachers")
     suspend fun getAll(): List<TeacherEntity>
 

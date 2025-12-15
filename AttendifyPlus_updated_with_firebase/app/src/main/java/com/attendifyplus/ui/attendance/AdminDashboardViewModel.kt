@@ -74,7 +74,7 @@ class AdminDashboardViewModel(
             }.timeInMillis
             
             events
-                .filter { it.date >= today && !it.isNoClass } // Filter out status events
+                .filter { it.date >= today && it.type != "status" } // Filter out status events
                 .sortedBy { it.date }
                 .take(2) // Limit to 2 events
         }
@@ -144,9 +144,6 @@ class AdminDashboardViewModel(
             // But for simplicity in this architecture, we'll simulate the "checking" or let UI observe unsynced count
             // However, to show "Success" or "Fail", we need to know the result.
             
-            // Simple approach: Wait for completion in a coroutine (not recommended for long running tasks but okay for quick syncs)
-            // Better: Let the worker run, and assume success if unsynced count drops?
-            
             // Let's rely on WorkManager's LiveData observation in UI or just a timed reset for now
             // To make it "premium", let's wait a bit to show the loading bar
             delay(2000) 
@@ -197,7 +194,7 @@ class AdminDashboardViewModel(
                     date = todayStart.timeInMillis,
                     title = reason,
                     description = "Manual Status Update",
-                    type = "holiday",
+                    type = "status", // Changed from "holiday"
                     isNoClass = true,
                     synced = false
                 )
@@ -287,15 +284,24 @@ class AdminDashboardViewModel(
                     }
                 }
                 
-                // Batch insert events
+                // Full Wipe and Replace Logic
+                // 1. Wipe all existing events (Local and Remote)
                 if (eventsToInsert.isNotEmpty()) {
+                    eventRepo.deleteAllEvents()
+                    // Small delay to ensure deletion propagation if async, though deleteAllEvents waits for await().
+                    // But to be safe on UI
+                    
+                    // 2. Insert new events
                     eventRepo.insertAll(eventsToInsert)
+                    
+                    _importStatus.value = "Import Successful: Calendar replaced with ${eventsToInsert.size} events."
+                } else {
+                    _importStatus.value = "Import Complete: No events found in CSV."
                 }
                 
                 // Update School Period
                 schoolPeriodRepo.insert(schoolPeriod)
                 
-                _importStatus.value = "Import Successful: ${eventsToInsert.size} events added."
             } catch (e: Exception) {
                 _importStatus.value = "Import Failed: ${e.message}"
                 e.printStackTrace()

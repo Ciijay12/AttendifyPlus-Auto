@@ -123,4 +123,24 @@ class TeacherRepository(private val dao: TeacherDao) {
             Timber.e(e, "Failed to update credentials in Firebase")
         }
     }
+
+    suspend fun syncAll() {
+        try {
+            val snapshot = dbRef.get().await()
+            if (snapshot.exists()) {
+                val remoteTeachers = mutableListOf<TeacherEntity>()
+                for (child in snapshot.children) {
+                    val teacher = child.getValue(TeacherEntity::class.java)
+                    if (teacher != null) {
+                        remoteTeachers.add(teacher)
+                    }
+                }
+                if (remoteTeachers.isNotEmpty()) {
+                    dao.insertAll(remoteTeachers)
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to sync teachers from Firebase")
+        }
+    }
 }

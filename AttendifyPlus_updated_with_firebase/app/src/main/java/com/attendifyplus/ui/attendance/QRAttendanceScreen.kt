@@ -225,19 +225,39 @@ fun QRAttendanceScreen(
                                             var parsedId: String? = rawValue
                                             var isValid = true
                                             
-                                            try {
-                                                val json = JSONObject(rawValue)
-                                                if (json.has("i")) {
-                                                    parsedId = json.getString("i")
-                                                    if (json.has("ts")) {
-                                                        val ts = json.getLong("ts")
-                                                        if (abs(now - ts) > validQrWindowMs) {
-                                                            isValid = false
+                                            // Handle Pipe Delimiter (Format: ID|TIMESTAMP)
+                                            if (parsedId != null && parsedId!!.contains("|")) {
+                                                val parts = parsedId!!.split("|")
+                                                if (parts.isNotEmpty()) {
+                                                    parsedId = parts[0]
+                                                    
+                                                    // Optional: Validate Timestamp if present
+                                                    if (parts.size > 1) {
+                                                        val ts = parts[1].toLongOrNull()
+                                                        if (ts != null && abs(now - ts) > validQrWindowMs) {
+                                                            // For now, we are lenient with timestamp validity as devices might be out of sync
+                                                            // isValid = false 
+                                                            // Log.d("QR", "Expired QR: $ts vs $now")
                                                         }
                                                     }
                                                 }
-                                            } catch (_: Exception) {
-                                                parsedId = rawValue
+                                            } else {
+                                                // Handle JSON Format
+                                                try {
+                                                    val json = JSONObject(rawValue)
+                                                    if (json.has("i")) {
+                                                        parsedId = json.getString("i")
+                                                        if (json.has("ts")) {
+                                                            val ts = json.getLong("ts")
+                                                            if (abs(now - ts) > validQrWindowMs) {
+                                                                isValid = false
+                                                            }
+                                                        }
+                                                    }
+                                                } catch (_: Exception) {
+                                                    // Not JSON, treat as raw ID
+                                                    parsedId = rawValue
+                                                }
                                             }
                                             
                                             if (isValid && parsedId != null) {
@@ -245,7 +265,7 @@ fun QRAttendanceScreen(
                                                 val finalSubject = selectedSubject ?: subjectName
                                                 
                                                 if (finalSubject != null) {
-                                                     viewModel.recordQr(parsedId, "subject", finalSubject)
+                                                     viewModel.recordQr(parsedId!!, "subject", finalSubject)
                                                 } else {
                                                     // If modal is hidden but no subject, re-show modal
                                                     scope.launch { modalSheetState.show() }

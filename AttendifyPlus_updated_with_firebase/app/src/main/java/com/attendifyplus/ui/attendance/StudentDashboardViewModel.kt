@@ -1,7 +1,10 @@
 package com.attendifyplus.ui.attendance
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.attendifyplus.data.local.entities.AttendanceEntity
 import com.attendifyplus.data.local.entities.SchoolEventEntity
 import com.attendifyplus.data.local.entities.SchoolPeriodEntity
@@ -12,6 +15,8 @@ import com.attendifyplus.data.repositories.SchoolEventRepository
 import com.attendifyplus.data.repositories.SchoolPeriodRepository
 import com.attendifyplus.data.repositories.StudentRepository
 import com.attendifyplus.data.repositories.SubjectClassRepository
+import com.attendifyplus.data.repositories.TeacherRepository
+import com.attendifyplus.sync.SyncWorker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,10 +28,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import java.util.UUID
 
 data class SubjectWithStatus(
     val subject: SubjectClassEntity,
-    val status: String // present, late, absent, or unmarked
+    val status: String, // present, late, absent, or unmarked
+    val teacherName: String // Added teacher name
 )
 
 class StudentDashboardViewModel(
@@ -34,7 +41,9 @@ class StudentDashboardViewModel(
     private val attendanceRepo: AttendanceRepository,
     private val subjectClassRepo: SubjectClassRepository,
     private val schoolEventRepo: SchoolEventRepository,
-    private val schoolPeriodRepo: SchoolPeriodRepository
+    private val schoolPeriodRepo: SchoolPeriodRepository,
+    private val teacherRepo: TeacherRepository, // Added TeacherRepository
+    private val context: Context
 ) : ViewModel() {
 
     private val _subjectClassesWithStatus = MutableStateFlow<List<SubjectWithStatus>>(emptyList())
@@ -87,12 +96,12 @@ class StudentDashboardViewModel(
             events
                 .filter { it.date >= today && !it.isNoClass } 
                 .sortedBy { it.date }
-                .take(2) // Limit to 2 events
+                .take(2) 
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
+    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
     fun loadStudentDetails(studentId: String) {
         currentStudentId = studentId
@@ -103,11 +112,37 @@ class StudentDashboardViewModel(
             _hasChangedCredentials.value = student?.hasChangedCredentials ?: false
 
             if (student != null) {
-                // Combine subject classes with their attendance status for today
+                // Fetch ALL classes and filter manually to be robust against format mismatches
+                // e.g. "11" vs "Grade 11", "Section A" vs "A"
+                
                 combine(
-                    subjectClassRepo.getClassesByGradeAndSection(student.grade, student.section),
+                    subjectClassRepo.getAllClassesFlow(), // Use the new flow for all classes
                     attendanceRepo.getStudentHistory(student.id)
-                ) { subjects, history ->
+                ) { allClasses, history ->
+                    // 1. Normalize Student Info
+                    val sGrade = student.grade.filter { it.isDigit() } // "Grade 11" -> "11"
+                    val sSectionRaw = student.section.trim().lowercase() // " Section A " -> "section a"
+                    // Strip "section" word if present for cleaner matching
+                    val sSection = sSectionRaw.replace("section", "").trim()
+
+                    // 2. Filter Classes
+                    val enrolledClasses = allClasses.filter { cls ->
+                        val cGrade = cls.gradeLevel.filter { it.isDigit() }
+                        val cSectionRaw = cls.section.trim().lowercase()
+                        val cSection = cSectionRaw.replace("section", "").trim()
+                        
+                        // Check match (Allow fuzzy section match if needed, but exact trim/lower is usually safe)
+                        // If grade is missing digits (e.g. "Kinder"), fallback to full string match
+                        val gradeMatch = if (sGrade.isNotEmpty() && cGrade.isNotEmpty()) sGrade == cGrade else student.grade == cls.gradeLevel
+                        
+                        // Section match: Strict equality after cleaning OR containment if one is just "A" and other is "St. Augustine - A"
+                        val sectionMatch = sSection == cSection || 
+                                           (sSection.isNotEmpty() && cSection.contains(sSection)) || 
+                                           (cSection.isNotEmpty() && sSection.contains(cSection))
+                        
+                        gradeMatch && sectionMatch
+                    }
+
                     val todayStart = Calendar.getInstance().apply {
                         set(Calendar.HOUR_OF_DAY, 0)
                         set(Calendar.MINUTE, 0)
@@ -123,10 +158,16 @@ class StudentDashboardViewModel(
 
                     val todaysRecords = history.filter { it.timestamp in todayStart..todayEnd }
                     
-                    subjects.map { subject ->
+                    val resultList = mutableListOf<SubjectWithStatus>()
+                    
+                    for (subject in enrolledClasses) {
                         val record = todaysRecords.find { it.subject == subject.subjectName }
-                        SubjectWithStatus(subject, record?.status ?: "unmarked")
+                        val teacher = teacherRepo.getById(subject.teacherId)
+                        val teacherName = if (teacher != null) "${teacher.firstName} ${teacher.lastName}" else "Unknown Teacher"
+                        
+                        resultList.add(SubjectWithStatus(subject, record?.status ?: "unmarked", teacherName))
                     }
+                    resultList
                 }.collect { classesWithStatus ->
                     _subjectClassesWithStatus.value = classesWithStatus
                 }
@@ -148,13 +189,37 @@ class StudentDashboardViewModel(
         }
     }
 
-    fun refresh() {
+    fun refresh(force: Boolean = false) {
         val id = currentStudentId ?: return
+         if (force) {
+            triggerSync()
+        } else {
+            viewModelScope.launch {
+                _syncState.value = SyncState.Loading
+                loadStudentDetails(id)
+                delay(1000)
+                _syncState.value = SyncState.Success
+                delay(2000)
+                _syncState.value = SyncState.Idle
+            }
+        }
+    }
+
+    private fun triggerSync() {
         viewModelScope.launch {
-            _isRefreshing.value = true
-            loadStudentDetails(id)
-            delay(1500) 
-            _isRefreshing.value = false
+            _syncState.value = SyncState.Loading
+            val workManager = WorkManager.getInstance(context)
+            val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+                .setId(UUID.randomUUID())
+                .addTag("manual_sync")
+                .build()
+
+            workManager.enqueue(syncRequest)
+
+            delay(3000)
+            _syncState.value = SyncState.Success
+            delay(2000)
+            _syncState.value = SyncState.Idle
         }
     }
 }
