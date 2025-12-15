@@ -7,11 +7,13 @@ import com.attendifyplus.data.local.entities.SchoolEventEntity
 import com.attendifyplus.data.local.entities.StudentEntity
 import com.attendifyplus.data.local.entities.SubjectClassEntity
 import com.attendifyplus.data.local.entities.TeacherEntity
+import com.attendifyplus.data.model.AppUpdateConfig
 import com.attendifyplus.data.repositories.AttendanceRepository
 import com.attendifyplus.data.repositories.SchoolEventRepository
 import com.attendifyplus.data.repositories.StudentRepository
 import com.attendifyplus.data.repositories.SubjectClassRepository
 import com.attendifyplus.data.repositories.TeacherRepository
+import com.attendifyplus.util.UpdateManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +40,8 @@ class DashboardViewModel(
     private val teacherRepo: TeacherRepository,
     private val studentRepo: StudentRepository,
     private val subjectClassRepo: SubjectClassRepository,
-    private val schoolEventRepo: SchoolEventRepository
+    private val schoolEventRepo: SchoolEventRepository,
+    private val updateManager: UpdateManager
 ) : ViewModel() {
     
     val unsyncedCount: StateFlow<Int> = attendanceRepo.unsyncedCount
@@ -77,6 +80,10 @@ class DashboardViewModel(
     val totalStudentCount: StateFlow<Int> = studentRepo.getAll()
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+        
+    // Update State
+    private val _updateConfig = MutableStateFlow<AppUpdateConfig?>(null)
+    val updateConfig: StateFlow<AppUpdateConfig?> = _updateConfig.asStateFlow()
 
     private var loadJob: Job? = null
 
@@ -140,6 +147,25 @@ class DashboardViewModel(
                 }
             }
         }
+        
+        // Check for updates
+        checkForUpdates()
+    }
+    
+    private fun checkForUpdates() {
+        viewModelScope.launch {
+            updateManager.getUpdateConfig().collect { config ->
+                if (config != null && updateManager.isUpdateAvailable(config)) {
+                    _updateConfig.value = config
+                } else {
+                    _updateConfig.value = null
+                }
+            }
+        }
+    }
+    
+    fun downloadUpdate(url: String) {
+        updateManager.downloadAndInstall(url)
     }
 
     fun loadAdviserDetails(teacherId: String = "T001") {

@@ -7,6 +7,7 @@ import com.attendifyplus.data.repositories.*
 import com.attendifyplus.ui.attendance.*
 import com.attendifyplus.ui.settings.DebugSettingsViewModel
 import com.attendifyplus.util.NotificationHelper
+import com.attendifyplus.util.UpdateManager
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
@@ -39,11 +40,14 @@ val appModule = module {
     
     // Notification Helper
     single { NotificationHelper(androidContext()) }
+    
+    // Update Manager
+    single { UpdateManager(androidContext()) }
 
     // Updated to inject context
     viewModel { AttendanceViewModel(get(), get(), get(), get(), get(), androidContext()) }
     viewModel { StudentListViewModel(get()) }
-    viewModel { DashboardViewModel(get(), get(), get(), get(), get()) }
+    viewModel { DashboardViewModel(get(), get(), get(), get(), get(), get()) } // Added UpdateManager
     viewModel { StudentHistoryViewModel(get()) }
     // Updated to inject context for Session Management
     viewModel { LoginViewModel(get(), get(), androidContext()) }

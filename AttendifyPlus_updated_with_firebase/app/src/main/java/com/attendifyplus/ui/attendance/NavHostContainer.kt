@@ -19,6 +19,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.attendifyplus.ui.components.GlobalUpdateHandler
 import com.attendifyplus.ui.settings.DebugSettingsScreen
 import org.koin.androidx.compose.getViewModel
 import java.net.URLDecoder
@@ -30,6 +31,9 @@ fun NavHostContainer(viewModel: LoginViewModel = getViewModel()) {
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
     val userId by viewModel.userId.collectAsState()
+
+    // Add Global Update Handler
+    GlobalUpdateHandler()
 
     NavHost(
         navController = nav,
