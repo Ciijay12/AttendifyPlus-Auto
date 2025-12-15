@@ -70,9 +70,11 @@ fun StudentDashboardScreen(
     val useDarkIcons = currentTab != 0
     SetSystemBarIcons(useDarkIcons = useDarkIcons)
 
-    // Load Student Details on Launch
+    // Load Student Details on Launch AND Trigger Sync for Period/Data
     LaunchedEffect(studentId) {
         viewModel.loadStudentDetails(studentId)
+        // Refresh triggers syncPeriod, ensuring the academic period is fetched
+        viewModel.refresh(force = false) 
     }
 
     LaunchedEffect(showMyQrDialog) {
@@ -245,12 +247,12 @@ fun StudentDashboardScreen(
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            // 1. Information Board
+                            // 1. Information Board (Unified with Admin/Teacher)
                             InformationBoardCard(
                                 upcomingEvents = upcomingEvents,
                                 currentPeriod = currentPeriod,
                                 dailyStatus = dailyStatus,
-                                onViewCalendar = {}
+                                onViewCalendar = { navController.navigate("school_calendar") } // Added navigation
                             )
 
                             // 2. Enrolled Advisory Class (Only if assigned)

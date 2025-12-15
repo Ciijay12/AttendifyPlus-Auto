@@ -189,11 +189,12 @@ fun TeacherDashboard(
                             .verticalScroll(rememberScrollState())
                     ) {
                         // Information Board (Floating over header)
+                        // Updated to navigate to Read-Only Calendar
                         InformationBoardCard(
                             upcomingEvents = upcomingEvents,
                             currentPeriod = currentPeriod,
                             dailyStatus = dailyStatus,
-                            onViewCalendar = { navController.navigate("academic_periods") },
+                            onViewCalendar = { navController.navigate("read_only_school_calendar") },
                             onEditStatus = { showStatusDialog = true }
                         )
                         Spacer(Modifier.height(100.dp)) // Bottom padding for scroll
@@ -255,11 +256,12 @@ fun TeacherDashboard(
             } else {
                 // Portrait / Compact Mode
                 // Information Board (Floating over header)
+                // Updated to navigate to Read-Only Calendar
                 InformationBoardCard(
                     upcomingEvents = upcomingEvents,
                     currentPeriod = currentPeriod,
                     dailyStatus = dailyStatus,
-                    onViewCalendar = { navController.navigate("academic_periods") },
+                    onViewCalendar = { navController.navigate("read_only_school_calendar") },
                     onEditStatus = { showStatusDialog = true }
                 )
                 
@@ -671,7 +673,7 @@ fun AdminDashboard(
                             upcomingEvents = upcomingEvents,
                             currentPeriod = currentPeriod,
                             dailyStatus = dailyStatus,
-                            onViewCalendar = { navController.navigate("school_calendar") }, // Changed to school_calendar
+                            onViewCalendar = { navController.navigate("school_calendar") }, // Admin still goes to full calendar
                             onEditStatus = { showStatusDialog = true }
                         )
                         Spacer(Modifier.height(100.dp))
@@ -743,7 +745,7 @@ fun AdminDashboard(
                     upcomingEvents = upcomingEvents,
                     currentPeriod = currentPeriod,
                     dailyStatus = dailyStatus,
-                    onViewCalendar = { navController.navigate("school_calendar") }, // Changed to school_calendar
+                    onViewCalendar = { navController.navigate("school_calendar") }, // Admin still goes to full calendar
                     onEditStatus = { showStatusDialog = true }
                 )
                 

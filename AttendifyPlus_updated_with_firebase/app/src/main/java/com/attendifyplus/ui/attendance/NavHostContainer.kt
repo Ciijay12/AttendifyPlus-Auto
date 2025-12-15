@@ -186,6 +186,7 @@ fun NavHostContainer(viewModel: LoginViewModel = getViewModel()) {
             TeacherDetailScreen(navController = nav, teacherId = backStackEntry.arguments?.getString("teacherId") ?: "")
         }
         composable("school_calendar") { SchoolCalendarScreen(navController = nav) }
+        composable("read_only_school_calendar") { ReadOnlySchoolCalendarScreen(navController = nav) } // Added Read-Only Route
         composable("academic_periods") { AcademicPeriodsScreen(navController = nav) }
         composable("admin_student_management") { AdminStudentManagementScreen(navController = nav) }
         composable("admin_grade_management") { AdminGradeManagementScreen(navController = nav) }

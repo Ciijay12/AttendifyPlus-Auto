@@ -6,11 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.attendifyplus.data.local.entities.StudentEntity
 import com.attendifyplus.data.repositories.StudentRepository
 import com.attendifyplus.data.repositories.TeacherRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import timber.log.Timber
 
 sealed interface LoginState {
     object Idle : LoginState
@@ -54,6 +57,21 @@ class LoginViewModel(
             _isLoggedIn.value = true
             _userRole.value = role
             _userId.value = id
+            
+            // Restore Firebase Auth for Admin if missing (e.g. after app restart)
+            if (role == "admin") {
+                viewModelScope.launch {
+                    try {
+                        val auth = FirebaseAuth.getInstance()
+                        if (auth.currentUser == null) {
+                            auth.signInAnonymously().await()
+                            Timber.d("Restored Admin Firebase Session")
+                        }
+                    } catch (e: Exception) {
+                        Timber.e(e, "Failed to restore admin firebase session")
+                    }
+                }
+            }
         } else {
             _isLoggedIn.value = false
             _userRole.value = null
@@ -78,6 +96,13 @@ class LoginViewModel(
         _isLoggedIn.value = false
         _userRole.value = null
         _userId.value = null
+        
+        // Also sign out from Firebase
+        try {
+            FirebaseAuth.getInstance().signOut()
+        } catch (e: Exception) {
+            Timber.e(e, "Error signing out from Firebase")
+        }
     }
 
     fun loginTeacher(user: String, pass: String) {
@@ -85,6 +110,18 @@ class LoginViewModel(
             _loginState.value = LoginState.Loading
             // Admin Check (Hardcoded for now as in most examples, or fetched from DB if seeded)
             if (user == "admin" && pass == "admin123") {
+                try {
+                    // Authenticate as Admin (Anonymous for now to satisfy auth!=null rules)
+                    val auth = FirebaseAuth.getInstance()
+                    if (auth.currentUser == null) {
+                        auth.signInAnonymously().await()
+                        Timber.d("Admin signed in anonymously to Firebase")
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to authenticate admin with Firebase")
+                    // We continue anyway, as local login might be sufficient for some features
+                }
+
                 delay(500)
                 saveSession("admin", "admin")
                 _loginState.value = LoginState.Success("admin", "admin")
@@ -95,8 +132,6 @@ class LoginViewModel(
             if (teacher != null) {
                 if (teacher.password == pass) {
                     // BUG FIX: Force remote fetch to get latest credential status for teacher
-                    // We use getById because getByUsername might be slower or redundant if we have the ID
-                    // But wait, we used username to login. Let's use getById with forceRemote now that we have the ID.
                     val freshTeacher = teacherRepo.getById(teacher.id, forceRemote = true) ?: teacher
 
                     if (!freshTeacher.hasChangedCredentials) {
