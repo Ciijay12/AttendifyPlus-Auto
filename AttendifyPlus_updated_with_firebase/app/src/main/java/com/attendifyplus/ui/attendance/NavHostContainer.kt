@@ -240,5 +240,8 @@ fun NavHostContainer(viewModel: LoginViewModel = getViewModel()) {
 
         // Debug Settings
         composable("debug_settings") { DebugSettingsScreen(navController = nav) }
+        
+        // Admin Profile
+        composable("admin_profile") { AdminProfileScreen(navController = nav) }
     }
 }

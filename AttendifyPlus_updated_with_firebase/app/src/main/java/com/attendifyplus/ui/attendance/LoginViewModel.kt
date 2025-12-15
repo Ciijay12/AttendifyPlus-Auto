@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.attendifyplus.data.local.entities.StudentEntity
+import com.attendifyplus.data.repositories.AdminRepository
 import com.attendifyplus.data.repositories.StudentRepository
 import com.attendifyplus.data.repositories.TeacherRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -26,6 +27,7 @@ sealed interface LoginState {
 class LoginViewModel(
     private val teacherRepo: TeacherRepository,
     private val studentRepo: StudentRepository,
+    private val adminRepo: AdminRepository,
     private val context: Context
 ) : ViewModel() {
 
@@ -54,23 +56,35 @@ class LoginViewModel(
         val id = prefs.getString("user_id", null)
         
         if (loggedIn && role != null) {
-            _isLoggedIn.value = true
-            _userRole.value = role
-            _userId.value = id
             
-            // Restore Firebase Auth for Admin if missing (e.g. after app restart)
+            // Check Session Validity for Admin
             if (role == "admin") {
                 viewModelScope.launch {
-                    try {
-                        val auth = FirebaseAuth.getInstance()
-                        if (auth.currentUser == null) {
-                            auth.signInAnonymously().await()
-                            Timber.d("Restored Admin Firebase Session")
+                    val isValid = adminRepo.checkSessionValidity()
+                    if (isValid) {
+                        _isLoggedIn.value = true
+                        _userRole.value = role
+                        _userId.value = id
+                        
+                        // Restore Firebase Auth for Admin if missing (e.g. after app restart)
+                        try {
+                            val auth = FirebaseAuth.getInstance()
+                            if (auth.currentUser == null) {
+                                auth.signInAnonymously().await()
+                                Timber.d("Restored Admin Firebase Session")
+                            }
+                        } catch (e: Exception) {
+                            Timber.e(e, "Failed to restore admin firebase session")
                         }
-                    } catch (e: Exception) {
-                        Timber.e(e, "Failed to restore admin firebase session")
+                    } else {
+                        // Force Logout if session is invalid
+                        onLogout()
                     }
                 }
+            } else {
+                _isLoggedIn.value = true
+                _userRole.value = role
+                _userId.value = id
             }
         } else {
             _isLoggedIn.value = false
@@ -92,6 +106,13 @@ class LoginViewModel(
     }
 
     fun onLogout() {
+        // If admin, clear remote session
+        if (_userRole.value == "admin") {
+            viewModelScope.launch {
+                adminRepo.logoutAdmin()
+            }
+        }
+        
         prefs.edit().clear().apply()
         _isLoggedIn.value = false
         _userRole.value = null
@@ -108,8 +129,10 @@ class LoginViewModel(
     fun loginTeacher(user: String, pass: String) {
         viewModelScope.launch {
             _loginState.value = LoginState.Loading
-            // Admin Check (Hardcoded for now as in most examples, or fetched from DB if seeded)
-            if (user == "admin" && pass == "admin123") {
+            
+            // Admin Check
+            // Use AdminRepository to check credentials
+            if (user == adminRepo.getUsername() && pass == adminRepo.getPassword()) {
                 try {
                     // Authenticate as Admin (Anonymous for now to satisfy auth!=null rules)
                     val auth = FirebaseAuth.getInstance()
@@ -117,9 +140,14 @@ class LoginViewModel(
                         auth.signInAnonymously().await()
                         Timber.d("Admin signed in anonymously to Firebase")
                     }
+                    
+                    // Claim Session
+                    adminRepo.loginAdmin()
+                    
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to authenticate admin with Firebase")
                     // We continue anyway, as local login might be sufficient for some features
+                    // But for session management, we still try to claim session
                 }
 
                 delay(500)
@@ -193,6 +221,13 @@ class LoginViewModel(
                 _loginState.value = LoginState.Error("Failed to update credentials: ${e.message}")
             }
         }
+    }
+    
+    // Admin Helper to update local credentials
+    fun updateAdminCredentials(user: String, pass: String) {
+         viewModelScope.launch {
+             adminRepo.updateCredentials(user, pass)
+         }
     }
 
     fun resetState() {

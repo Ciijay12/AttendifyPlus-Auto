@@ -560,7 +560,8 @@ fun GenerateQrCodeDialog(
 fun AdminDashboard(
     navController: NavController,
     onTeachers: () -> Unit,
-    // onConfig removed or handled internally if not needed
+    role: String = "admin", // Unused but consistent with signature
+    onLogout: () -> Unit,
     viewModel: AdminDashboardViewModel = getViewModel()
 ) {
     val dailyStatus by viewModel.dailyStatus.collectAsState()
@@ -653,7 +654,7 @@ fun AdminDashboard(
                     color = Color.White.copy(alpha = 0.2f),
                     modifier = Modifier.size(40.dp)
                 ) {
-                    IconButton(onClick = { /* Navigate to profile */ }) {
+                    IconButton(onClick = { navController.navigate("admin_profile") }) {
                         Icon(Icons.Default.Person, contentDescription = "Profile", tint = Color.White)
                     }
                 }

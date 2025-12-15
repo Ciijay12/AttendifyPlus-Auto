@@ -13,6 +13,7 @@ fun DashboardScreen(
     navController: NavController,
     role: String,
     onTeachers: () -> Unit,
+    onLogout: () -> Unit = {}, // Added optional onLogout parameter with default empty lambda
     userName: String = "" // Added optional userName parameter
 ) {
     when (role) {
@@ -26,7 +27,9 @@ fun DashboardScreen(
         )
         "admin" -> AdminDashboard(
             navController = navController,
-            onTeachers = onTeachers
+            onTeachers = onTeachers,
+            role = role,
+            onLogout = onLogout // Pass it down
         )
         else -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -11,6 +11,7 @@ import androidx.work.WorkManager
 import com.attendifyplus.data.local.entities.SchoolEventEntity
 import com.attendifyplus.data.local.entities.SchoolPeriodEntity
 import com.attendifyplus.data.local.entities.TeacherEntity
+import com.attendifyplus.data.repositories.AdminRepository
 import com.attendifyplus.data.repositories.AttendanceRepository
 import com.attendifyplus.data.repositories.SchoolEventRepository
 import com.attendifyplus.data.repositories.SchoolPeriodRepository
@@ -41,6 +42,7 @@ class AdminDashboardViewModel(
     private val attendanceRepo: AttendanceRepository,
     private val schoolPeriodRepo: SchoolPeriodRepository,
     private val eventRepo: SchoolEventRepository,
+    private val adminRepo: AdminRepository, // Added AdminRepository
     private val context: Context
 ) : ViewModel() {
 

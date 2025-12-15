@@ -97,10 +97,12 @@ fun AdminDashboardScreen(
                     // Ensure sheet state is reset when not on the teachers tab
                     SideEffect { isSheetOpen = false }
                     Box(Modifier.padding(bottom = 88.dp).fillMaxSize()) {
-                        DashboardScreen(
+                        // Pass onLogout explicitly to AdminDashboard
+                        AdminDashboard(
                             navController = navController,
+                            onTeachers = { selectedTab = 1 },
                             role = role,
-                            onTeachers = { selectedTab = 1 }
+                            onLogout = onLogout
                         )
                     }
                 }

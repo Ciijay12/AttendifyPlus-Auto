@@ -39,6 +39,9 @@ val appModule = module {
     single { AdminSubjectRepository(get()) }
     single { SyncRepository(get(), androidContext()) }
     
+    // New Admin Repository
+    single { AdminRepository(androidContext()) }
+    
     // Notification Helper
     single { NotificationHelper(androidContext()) }
     
@@ -53,8 +56,8 @@ val appModule = module {
     // Updated StudentHistoryViewModel with more dependencies for robust filtering
     viewModel { (studentId: String) -> StudentHistoryViewModel(get(), get(), get(), studentId) }
     
-    // Updated to inject context for Session Management
-    viewModel { LoginViewModel(get(), get(), androidContext()) }
+    // Updated to inject AdminRepository
+    viewModel { LoginViewModel(get(), get(), get(), androidContext()) }
     viewModel { SubjectClassViewModel(get(), get(), androidContext()) } // Updated to inject TeacherRepository and Context
     viewModel { AdvisoryDetailsViewModel(get(), androidContext()) } // Updated to inject Context
     viewModel { ClassDashboardViewModel(get(), get()) }
@@ -70,7 +73,9 @@ val appModule = module {
     // Fixed: Added the missing get() for TeacherRepository in StudentDashboardViewModel (6 get() calls + context)
     viewModel { StudentDashboardViewModel(get(), get(), get(), get(), get(), get(), androidContext()) }
     viewModel { TeacherDashboardViewModel(get(), get(), get(), get(), get(), get(), androidContext()) }
-    viewModel { AdminDashboardViewModel(get(), get(), get(), get(), get(), androidContext()) }
+    
+    // Updated AdminDashboardViewModel to inject AdminRepository
+    viewModel { AdminDashboardViewModel(get(), get(), get(), get(), get(), get(), androidContext()) }
     
     // Feature 1: Retroactive Attendance ViewModel
     viewModel { RetroactiveAttendanceViewModel(get(), get()) }
