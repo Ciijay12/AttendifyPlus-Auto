@@ -222,7 +222,7 @@ fun LoginScreen(
                             Spacer(Modifier.height(8.dp))
                             Text("• Teachers: Please contact the Administrator to register your account and get your login credentials.", color = MaterialTheme.colors.onSurface)
                             Spacer(Modifier.height(8.dp))
-                            Text("• Students: Please contact your Adviser or Subject Teacher to enroll you in their class. You can log in with your Student ID or your First Name as the default username.", color = MaterialTheme.colors.onSurface)
+                            Text("• Students: Please contact your Adviser or Subject Teacher to enroll you in their class. Your Student ID is your default username.", color = MaterialTheme.colors.onSurface)
                         }
                     },
                     confirmButton = {

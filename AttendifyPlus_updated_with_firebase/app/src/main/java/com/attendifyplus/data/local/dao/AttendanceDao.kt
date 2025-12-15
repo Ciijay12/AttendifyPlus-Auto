@@ -6,7 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AttendanceDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    // Changed to REPLACE to allow updates to existing records (e.g. changing status from Present to Late)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(attendance: AttendanceEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

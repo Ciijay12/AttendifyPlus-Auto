@@ -113,84 +113,86 @@ class StudentDashboardViewModel(
 
     fun loadStudentDetails(studentId: String) {
         currentStudentId = studentId
+        
+        // Use Flow collection instead of one-shot fetch for responsiveness to sync
         viewModelScope.launch {
-            val student = studentRepo.getById(studentId)
-            _userName.value = student?.firstName ?: "Student"
-            _hasChangedCredentials.value = student?.hasChangedCredentials ?: false
+            studentRepo.getByIdFlow(studentId).collect { student ->
+                _userName.value = student?.firstName ?: "Student"
+                _hasChangedCredentials.value = student?.hasChangedCredentials ?: false
 
-            if (student != null) {
-                // Fetch Advisory Info (Adviser)
-                // teacherRepo.getAll() returns a List directly (suspend function), not a Flow
-                val teachers = teacherRepo.getAll() 
-                val adviser = teachers.find { 
-                    it.advisoryGrade == student.grade && it.advisorySection == student.section 
-                }
-                
-                _advisoryInfo.value = StudentAdvisoryInfo(
-                    grade = student.grade,
-                    section = student.section,
-                    adviserName = if (adviser != null) "${adviser.firstName} ${adviser.lastName}" else "Unassigned",
-                    track = adviser?.advisoryTrack // Get track from adviser
-                )
-
-                // Fetch ALL classes and filter manually to be robust against format mismatches
-                // e.g. "11" vs "Grade 11", "Section A" vs "A"
-                
-                combine(
-                    subjectClassRepo.getAllClassesFlow(), // Use the new flow for all classes
-                    attendanceRepo.getStudentHistory(student.id)
-                ) { allClasses, history ->
-                    // 1. Normalize Student Info
-                    val sGrade = student.grade.filter { it.isDigit() } // "Grade 11" -> "11"
-                    val sSectionRaw = student.section.trim().lowercase() // " Section A " -> "section a"
-                    // Strip "section" word if present for cleaner matching
-                    val sSection = sSectionRaw.replace("section", "").trim()
-
-                    // 2. Filter Classes
-                    val enrolledClasses = allClasses.filter { cls ->
-                        val cGrade = cls.gradeLevel.filter { it.isDigit() }
-                        val cSectionRaw = cls.section.trim().lowercase()
-                        val cSection = cSectionRaw.replace("section", "").trim()
-                        
-                        // Check match (Allow fuzzy section match if needed, but exact trim/lower is usually safe)
-                        // If grade is missing digits (e.g. "Kinder"), fallback to full string match
-                        val gradeMatch = if (sGrade.isNotEmpty() && cGrade.isNotEmpty()) sGrade == cGrade else student.grade == cls.gradeLevel
-                        
-                        // Section match: Strict equality after cleaning OR containment if one is just "A" and other is "St. Augustine - A"
-                        val sectionMatch = sSection == cSection || 
-                                           (sSection.isNotEmpty() && cSection.contains(sSection)) || 
-                                           (cSection.isNotEmpty() && sSection.contains(cSection))
-                        
-                        gradeMatch && sectionMatch
+                if (student != null) {
+                    // Fetch Advisory Info (Adviser)
+                    val teachers = teacherRepo.getAll() 
+                    val adviser = teachers.find { 
+                        it.advisoryGrade == student.grade && it.advisorySection == student.section 
                     }
-
-                    val todayStart = Calendar.getInstance().apply {
-                        set(Calendar.HOUR_OF_DAY, 0)
-                        set(Calendar.MINUTE, 0)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                    }.timeInMillis
-
-                    val todayEnd = Calendar.getInstance().apply {
-                        set(Calendar.HOUR_OF_DAY, 23)
-                        set(Calendar.MINUTE, 59)
-                        set(Calendar.SECOND, 59)
-                    }.timeInMillis
-
-                    val todaysRecords = history.filter { it.timestamp in todayStart..todayEnd }
                     
-                    val resultList = mutableListOf<SubjectWithStatus>()
+                    _advisoryInfo.value = StudentAdvisoryInfo(
+                        grade = student.grade,
+                        section = student.section,
+                        adviserName = if (adviser != null) "${adviser.firstName} ${adviser.lastName}" else "Unassigned",
+                        track = adviser?.advisoryTrack // Get track from adviser
+                    )
+
+                    // Fetch ALL classes and filter manually to be robust against format mismatches
+                    // e.g. "11" vs "Grade 11", "Section A" vs "A"
                     
-                    for (subject in enrolledClasses) {
-                        val record = todaysRecords.find { it.subject == subject.subjectName }
-                        val subjTeacher = teacherRepo.getById(subject.teacherId)
-                        val teacherName = if (subjTeacher != null) "${subjTeacher.firstName} ${subjTeacher.lastName}" else "Unknown Teacher"
+                    combine(
+                        subjectClassRepo.getAllClassesFlow(), // Use the new flow for all classes
+                        attendanceRepo.getStudentHistory(student.id)
+                    ) { allClasses, history ->
+                        // 1. Normalize Student Info
+                        val sGrade = student.grade.filter { it.isDigit() } // "Grade 11" -> "11"
+                        val sSectionRaw = student.section.trim().lowercase() // " Section A " -> "section a"
+                        // Strip "section" word if present for cleaner matching
+                        val sSection = sSectionRaw.replace("section", "").trim()
+
+                        // 2. Filter Classes
+                        val enrolledClasses = allClasses.filter { cls ->
+                            val cGrade = cls.gradeLevel.filter { it.isDigit() }
+                            val cSectionRaw = cls.section.trim().lowercase()
+                            val cSection = cSectionRaw.replace("section", "").trim()
+                            
+                            // Check match (Allow fuzzy section match if needed, but exact trim/lower is usually safe)
+                            // If grade is missing digits (e.g. "Kinder"), fallback to full string match
+                            val gradeMatch = if (sGrade.isNotEmpty() && cGrade.isNotEmpty()) sGrade == cGrade else student.grade == cls.gradeLevel
+                            
+                            // Section match: Strict equality after cleaning OR containment if one is just "A" and other is "St. Augustine - A"
+                            val sectionMatch = sSection == cSection || 
+                                               (sSection.isNotEmpty() && cSection.contains(sSection)) || 
+                                               (cSection.isNotEmpty() && sSection.contains(cSection))
+                            
+                            gradeMatch && sectionMatch
+                        }
+
+                        val todayStart = Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, 0)
+                            set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
+
+                        val todayEnd = Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, 23)
+                            set(Calendar.MINUTE, 59)
+                            set(Calendar.SECOND, 59)
+                        }.timeInMillis
+
+                        val todaysRecords = history.filter { it.timestamp in todayStart..todayEnd }
                         
-                        resultList.add(SubjectWithStatus(subject, record?.status ?: "unmarked", teacherName))
+                        val resultList = mutableListOf<SubjectWithStatus>()
+                        
+                        for (subject in enrolledClasses) {
+                            val record = todaysRecords.find { it.subject == subject.subjectName }
+                            val subjTeacher = teacherRepo.getById(subject.teacherId)
+                            val teacherName = if (subjTeacher != null) "${subjTeacher.firstName} ${subjTeacher.lastName}" else "Unknown Teacher"
+                            
+                            resultList.add(SubjectWithStatus(subject, record?.status ?: "unmarked", teacherName))
+                        }
+                        resultList
+                    }.collect { classesWithStatus ->
+                        _subjectClassesWithStatus.value = classesWithStatus
                     }
-                    resultList
-                }.collect { classesWithStatus ->
-                    _subjectClassesWithStatus.value = classesWithStatus
                 }
             }
         }
@@ -225,7 +227,15 @@ class StudentDashboardViewModel(
                     // Ignore, sync might fail if offline but data should be in DB if ever synced
                 }
                 
-                loadStudentDetails(id)
+                // Forcing reload isn't strictly necessary with Flow, but good for UX feedback
+                // and to trigger side-effects if needed.
+                // Since loadStudentDetails sets up a permanent collection, re-calling it is risky (might dup collectors).
+                // Better to just delay or let Flow handle updates.
+                // But user might want to re-fetch "teachers" which are not flowed in this VM.
+                // So re-calling is okay if we handle job cancellation or if it's cheap.
+                // Here, loadStudentDetails launches a new coroutine.
+                // To be safe, let's just let the Flows update naturally and delay for visual effect.
+                
                 delay(1000)
                 _syncState.value = SyncState.Success
                 delay(2000)

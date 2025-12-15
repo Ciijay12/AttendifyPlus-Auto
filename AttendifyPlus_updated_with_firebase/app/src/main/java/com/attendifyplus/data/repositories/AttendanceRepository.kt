@@ -19,8 +19,10 @@ class AttendanceRepository(private val dao: AttendanceDao, private val context: 
     private val dbRef = FirebaseDatabase.getInstance().getReference("attendance")
 
     suspend fun record(entity: AttendanceEntity) {
+        // Insert or Update locally
         val id = dao.insert(entity)
-        // Instant Push to Firebase
+        
+        // Instant Push/Update to Firebase
         try {
             val map = mapOf(
                 "studentId" to entity.studentId,
@@ -32,8 +34,11 @@ class AttendanceRepository(private val dao: AttendanceDao, private val context: 
                 "updatedAt" to System.currentTimeMillis(),
                 "deviceId" to android.os.Build.MODEL
             )
-            // Use push() to generate a unique key for the record in Firebase
-            dbRef.push().setValue(map).await()
+            
+            // Use deterministic key to ensure updates overwrite existing records for this student/timestamp
+            val key = "${entity.studentId}_${entity.timestamp}"
+            
+            dbRef.child(key).setValue(map).await()
             
             // Mark as synced locally since we just succeeded
             dao.markSynced(listOf(id))
@@ -65,9 +70,19 @@ class AttendanceRepository(private val dao: AttendanceDao, private val context: 
                         val subject = map["subject"] as? String
                         val academicPeriod = map["academicPeriod"] as? String
                         
-                        // Check if exists locally
-                        val exists = dao.countByStudentAndTimestampCount(studentId, timestamp) > 0
-                        if (!exists) {
+                        // Check if exists locally to avoid overwriting newer local edits if sync is slow?
+                        // Or just upsert.
+                        // We use count check to avoid creating duplicates if ID is different, 
+                        // but since we want to sync DOWN updates (e.g. teacher edited on another device),
+                        // we should probably check existence and UPDATE.
+                        
+                        val existing = dao.getByStudentAndTimestamp(studentId, timestamp)
+                        
+                        if (existing != null) {
+                            // Update existing record
+                            dao.insert(existing.copy(status = status, synced = true))
+                        } else {
+                            // Insert new record
                             remoteList.add(
                                 AttendanceEntity(
                                     studentId = studentId,

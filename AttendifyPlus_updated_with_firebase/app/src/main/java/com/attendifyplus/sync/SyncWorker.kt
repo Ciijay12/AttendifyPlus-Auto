@@ -58,7 +58,11 @@ class SyncWorker(appContext: Context, params: WorkerParameters) : CoroutineWorke
                     "updatedAt" to System.currentTimeMillis(),
                     "deviceId" to android.os.Build.MODEL
                 )
-                attendanceRef.push().setValue(map).await()
+                
+                // Use deterministic key for robustness (matches AttendanceRepository logic)
+                val key = "${local.studentId}_${local.timestamp}"
+                
+                attendanceRef.child(key).setValue(map).await()
                 attendanceRepo.markSynced(listOf(local.id))
             }
             

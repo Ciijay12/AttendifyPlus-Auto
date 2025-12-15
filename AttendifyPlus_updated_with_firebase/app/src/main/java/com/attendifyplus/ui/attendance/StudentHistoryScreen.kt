@@ -1,10 +1,10 @@
 package com.attendifyplus.ui.attendance
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items as lazyRowItems
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +12,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,6 +52,13 @@ fun StudentHistoryScreen(
     val late = history.count { it.status.equals("late", ignoreCase = true) }
     val absent = history.count { it.status.equals("absent", ignoreCase = true) }
     val total = history.size
+
+    // Group history by Date for robust display
+    val groupedHistory = remember(history) {
+        history.groupBy { 
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it.timestamp))
+        }
+    }
 
     if (showLogoutDialog) {
         AlertDialog(
@@ -159,10 +167,10 @@ fun StudentHistoryScreen(
             Text(
                 text = "Recent Activity",
                 style = MaterialTheme.typography.h6.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colors.onSurface),
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            // List
+            // Grouped List by Date
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -178,65 +186,81 @@ fun StudentHistoryScreen(
                         }
                     }
                 } else {
-                    items(history) { item ->
-                        val dateStr = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(item.timestamp))
-                        val timeStr = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.timestamp))
-                        
-                        val statusColor = when(item.status.lowercase()) {
-                            "present" -> SuccessGreen
-                            "late" -> WarningYellow
-                            "absent" -> Color.Red
-                            else -> MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                    groupedHistory.forEach { (dateKey, items) ->
+                        item {
+                            // Date Header
+                            Text(
+                                text = prettyDate(dateKey),
+                                style = MaterialTheme.typography.subtitle2.copy(
+                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.5f),
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                            )
                         }
+                        
+                        items.forEach { item ->
+                            item {
+                                val timeStr = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.timestamp))
+                                val statusColor = when(item.status.lowercase()) {
+                                    "present" -> SuccessGreen
+                                    "late" -> WarningYellow
+                                    "absent" -> Color.Red
+                                    else -> MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                                }
 
-                        Card(
-                            shape = MaterialTheme.shapes.medium,
-                            elevation = 2.dp,
-                            modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = MaterialTheme.colors.surface
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    shape = androidx.compose.foundation.shape.CircleShape,
-                                    color = statusColor.copy(alpha = 0.1f),
-                                    modifier = Modifier.size(48.dp)
+                                Card(
+                                    shape = MaterialTheme.shapes.medium,
+                                    elevation = 2.dp,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    backgroundColor = MaterialTheme.colors.surface
                                 ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            if (item.status.equals("present", true)) Icons.Default.CheckCircle else Icons.Default.Schedule, 
-                                            contentDescription = null, 
-                                            tint = statusColor
-                                        )
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Surface(
+                                            shape = androidx.compose.foundation.shape.CircleShape,
+                                            color = statusColor.copy(alpha = 0.1f),
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    if (item.status.equals("present", true)) Icons.Default.CheckCircle else Icons.Default.Schedule, 
+                                                    contentDescription = null, 
+                                                    tint = statusColor,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                        
+                                        Spacer(Modifier.width(16.dp))
+                                        
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = item.subject ?: "Homeroom",
+                                                style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colors.onSurface)
+                                            )
+                                            Text(
+                                                text = timeStr,
+                                                style = MaterialTheme.typography.caption.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f))
+                                            )
+                                        }
+                                        
+                                        Surface(
+                                            shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                                            color = statusColor.copy(alpha = 0.1f)
+                                        ) {
+                                            Text(
+                                                text = item.status.replaceFirstChar { it.uppercase() },
+                                                color = statusColor,
+                                                style = MaterialTheme.typography.caption.copy(fontWeight = FontWeight.Bold),
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                            )
+                                        }
                                     }
                                 }
-                                
-                                Spacer(Modifier.width(16.dp))
-                                
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = item.subject ?: "Homeroom",
-                                        style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colors.onSurface)
-                                    )
-                                    Text(
-                                        text = "$dateStr • $timeStr",
-                                        style = MaterialTheme.typography.caption.copy(color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f))
-                                    )
-                                }
-                                
-                                Surface(
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
-                                    color = statusColor.copy(alpha = 0.1f)
-                                ) {
-                                    Text(
-                                        text = item.status.replaceFirstChar { it.uppercase() },
-                                        color = statusColor,
-                                        style = MaterialTheme.typography.caption.copy(fontWeight = FontWeight.Bold),
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                    )
-                                }
+                                Spacer(Modifier.height(8.dp))
                             }
                         }
                     }
@@ -289,5 +313,36 @@ fun StatCounter(label: String, count: Int) {
             text = label,
             style = MaterialTheme.typography.caption.copy(color = Color.White.copy(alpha = 0.7f))
         )
+    }
+}
+
+fun prettyDate(dateString: String): String {
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    try {
+        val date = sdf.parse(dateString) ?: return dateString
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val check = Calendar.getInstance().apply { time = date }
+        
+        // Reset time for check calendar to ensure day comparison works
+        val itemDate = Calendar.getInstance().apply {
+            set(check.get(Calendar.YEAR), check.get(Calendar.MONTH), check.get(Calendar.DAY_OF_MONTH), 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        val diff = today.timeInMillis - itemDate.timeInMillis
+        val days = diff / (24 * 60 * 60 * 1000)
+
+        return when (days) {
+            0L -> "Today"
+            1L -> "Yesterday"
+            else -> SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(date)
+        }
+    } catch (e: Exception) {
+        return dateString
     }
 }

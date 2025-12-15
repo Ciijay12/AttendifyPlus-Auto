@@ -43,6 +43,9 @@ class StudentRepository(private val dao: StudentDao) {
         
         return null
     }
+    
+    // New: Observe student by ID as a Flow
+    fun getByIdFlow(id: String): Flow<StudentEntity?> = dao.getByIdFlow(id)
 
     suspend fun getByUsername(username: String): StudentEntity? {
         val local = dao.getByUsername(username)

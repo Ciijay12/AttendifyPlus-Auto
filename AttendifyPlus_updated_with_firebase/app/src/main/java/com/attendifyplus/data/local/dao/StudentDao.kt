@@ -11,6 +11,10 @@ interface StudentDao {
 
     @Query("SELECT * FROM students WHERE id = :id")
     suspend fun getById(id: String): StudentEntity?
+    
+    // Added Flow version of getById
+    @Query("SELECT * FROM students WHERE id = :id")
+    fun getByIdFlow(id: String): Flow<StudentEntity?>
 
     @Query("SELECT * FROM students WHERE username = :username")
     suspend fun getByUsername(username: String): StudentEntity?
