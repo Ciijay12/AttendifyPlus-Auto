@@ -25,14 +25,15 @@ jobs:
           mkdir -p AttendifyPlus_updated_with_firebase/app
           echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/upload-keystore.jks
 
-      - name: Create google-services.json
+      - name: Create google-services.json from Base64
         run: |
           mkdir -p AttendifyPlus_updated_with_firebase/app
-          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" > AttendifyPlus_updated_with_firebase/app/google-services.json
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/google-services.json
 
       - name: Verify google-services.json
         run: |
-          ls -l AttendifyPlus_updated_with_firebase/app
+          echo "Checking google-services.json..."
+          head -n 5 AttendifyPlus_updated_with_firebase/app/google-services.json
           wc -c AttendifyPlus_updated_with_firebase/app/google-services.json
 
       - name: Grant Gradle permission
