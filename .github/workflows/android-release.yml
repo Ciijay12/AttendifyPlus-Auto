@@ -6,12 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  build:    runs-on: ubuntu-latest
-    
-    # Run commands inside your project subfolder
-    defaults:
-      run:
-        working-directory: ./AttendifyPlus_updated_with_firebase
+  build:
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
@@ -24,10 +20,16 @@ jobs:
           cache: gradle
 
       - name: Decode Keystore
-        run: echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > app/upload-keystore.jks
+        # We write the keystore file directly into the subfolder
+        run: |
+          echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > AttendifyPlusFULLFINALV4/AttendifyPlus_updated_with_firebase/app/upload-keystore.jks
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease
+        # We cd into the folder before running gradlew
+        run: |
+          cd AttendifyPlusFULLFINALV4/AttendifyPlus_updated_with_firebase
+          chmod +x gradlew
+          ./gradlew assembleRelease
         env:
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -36,5 +38,4 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          # This path must be relative to the Git Root
-          files: AttendifyPlus_updated_with_firebase/app/build/outputs/apk/release/app-release.apk
+          files: AttendifyPlusFULLFINALV4/AttendifyPlus_updated_with_firebase/app/build/outputs/apk/release/app-release.apk
