@@ -24,21 +24,18 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          mkdir -p AttendifyPlus_updated_with_firebase/app
-          echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/upload-keystore.jks
+          mkdir -p app
+          echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > app/upload-keystore.jks
 
       - name: Create google-services.json
         run: |
-          mkdir -p AttendifyPlus_updated_with_firebase/app
-          echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/google-services.json
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > app/google-services.json
 
       - name: Grant Gradle permission
-        run: chmod +x AttendifyPlus_updated_with_firebase/gradlew
+        run: chmod +x gradlew
 
       - name: Build Release APK
-        run: |
-          cd AttendifyPlus_updated_with_firebase
-          ./gradlew assembleRelease
+        run: ./gradlew assembleRelease
         env:
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -48,7 +45,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: AttendifyPlus_updated_with_firebase/app/build/outputs/apk/release/app-release.apk
+          files: app/build/outputs/apk/release/app-release.apk
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           draft: false
