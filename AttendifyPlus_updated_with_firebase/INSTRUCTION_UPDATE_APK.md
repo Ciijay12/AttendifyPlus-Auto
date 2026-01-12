@@ -10,11 +10,12 @@ Follow these steps to generate your first download link.
 
 ### Step 1: Start the Build on GitHub
 1.  Open your web browser and go to your **GitHub Repository** ([https://github.com/Ciijay12/AttendifyPlus-Auto](https://github.com/Ciijay12/AttendifyPlus-Auto)).
-2.  Click the **"Actions"** tab at the top of the page.
-3.  On the left-side menu, click **"Build & Release APK"**.
-4.  Look for a gray button that says **"Run workflow"** on the right side. Click it.
-5.  Click the green **"Run workflow"** button that appears.
-6.  Wait about 5 minutes. You will see a yellow circle turning. When it turns into a **Green Checkmark (✅)**, your app is ready!
+2.  **Crucial Security Check:** Go to **Settings > General**, scroll to the bottom (**Danger Zone**), and ensure the repository is **PUBLIC**. If it is private, the download link will fail for students.
+3.  Click the **"Actions"** tab at the top of the page.
+4.  On the left-side menu, click **"Build & Release APK"**.
+5.  Look for a gray button that says **"Run workflow"** on the right side. Click it.
+6.  Click the green **"Run workflow"** button that appears.
+7.  Wait about 5 minutes. You will see a yellow circle turning. When it turns into a **Green Checkmark (✅)**, your app is ready!
 
 ### Step 2: Get your Download Link
 1.  Go back to the main page of your repository (click the **"Code"** tab at the top left).
@@ -46,27 +47,49 @@ Android phones will not install an update if the version is the same as before.
 2.  Type these three commands one by one (press Enter after each):
 ```powershell
 git add .
-git commit -m "I fixed the login bug"
+git commit -m "Description of your changes"
 git push origin master
 ```
 
-### Step 3: Trigger the New Build
-1.  Go back to your **GitHub Actions** tab in your browser.
-2.  Click **"Build & Release APK"** and click **"Run workflow"** again.
-3.  Wait for the **Green Checkmark (✅)**.
+### Step 3: Trigger the New Release (Using Tags)
+To create an actual "Release" entry on GitHub, you must push a version tag.
+1.  If you get an error saying **"tag already exists"**, run these two commands first:
+```powershell
+git tag -d v1.0.1
+git push --delete origin v1.0.1
+```
+*(Replace `v1.0.1` with the version number you are using)*
+
+2.  Now, create and push the fresh tag:
+```powershell
+git tag v1.0.1
+git push origin v1.0.1
+```
 
 ### Step 4: Notify the Phones (Firebase)
 This step makes the "Update Available" pop-up appear on everyone's phones.
 1.  Go to the [Firebase Console](https://console.firebase.google.com/).
 2.  Click on your project, then click **Realtime Database** on the left.
 3.  Find the folder named **`config`**, then **`update`**.
-4.  Change these 4 values to match your new version:
-    *   **`versionCode`**: The new number you typed in Step 1 (e.g., `2`).
+4.  Change these values to match your new version:
+    *   **`versionCode`**: The new number from Step 1 (e.g., `2`).
     *   **`versionName`**: The new name (e.g., `1.0.1`).
-    *   **`downloadUrl`**: Copy the NEW link from the GitHub Releases page.
+    *   **`downloadUrl`**: Copy the NEW direct `.apk` link from the GitHub Releases page.
     *   **`releaseNotes`**: Type a short message like "Fixed bugs and improved speed."
 
 ---
 
-## 💡 Pro-Tip for Installation
-When students install the APK for the first time, their phone might say "Blocked by Play Protect." Tell them to click **"Install Anyway"**. This happens because your app is a private project and not yet on the official Google Play Store.
+## 🛠️ Troubleshooting common issues
+
+### "Permission Denied / 403 Error"
+If Git asks for a login or denies access, ensure you are using the correct account:
+1.  Open **Credential Manager** on your Windows computer.
+2.  Go to **Windows Credentials**.
+3.  Remove any entry starting with `git:https://github.com`.
+4.  Go back to Android Studio and push again; it will ask you to sign in.
+
+### "Download stuck at 100%"
+This usually means the link is not a "Direct Link." Ensure you right-clicked the **`app-release.apk`** file specifically in GitHub Releases and selected "Copy link address." The link should end in `.apk`.
+
+### "Blocked by Play Protect"
+When installing, tell students to click **"Install Anyway"**. This is normal for private student projects.
