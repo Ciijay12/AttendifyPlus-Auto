@@ -1,0 +1,74 @@
+name: Build & Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Decode Keystore
+        run: |
+          mkdir -p AttendifyPlus_updated_with_firebase/app
+          echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/upload-keystore.jks
+
+      - name: Create google-services.json from Base64
+        run: |
+          mkdir -p AttendifyPlus_updated_with_firebase/app
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/google-services.json
+
+      - name: Verify google-services.json and fail if empty
+        run: |
+          echo "Checking google-services.json..."
+          FILE="AttendifyPlus_updated_with_firebase/app/google-services.json"
+          
+          # Check if file exists
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: google-services.json does not exist!"
+            exit 1
+          fi
+          
+          # Check if file is empty
+          SIZE=$(wc -c < "$FILE")
+          if [ "$SIZE" -eq 0 ]; then
+            echo "ERROR: google-services.json is empty!"
+            exit 1
+          fi
+          
+          # Print first few lines for verification
+          head -n 5 "$FILE"
+          echo "$SIZE bytes"
+
+      - name: Grant Gradle permission
+        run: |
+          cd AttendifyPlus_updated_with_firebase
+          chmod +x gradlew
+
+      - name: Build Release APK
+        run: |
+          cd AttendifyPlus_updated_with_firebase
+          ./gradlew assembleRelease
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+
+      - name: Upload APK to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: AttendifyPlus_updated_with_firebase/app/build/outputs/apk/release/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
