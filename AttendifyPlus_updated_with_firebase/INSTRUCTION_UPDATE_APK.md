@@ -1,72 +1,72 @@
-# AttendifyPlus: Release and Update Guide
+# AttendifyPlus: Easy Release and Update Guide 🚀
 
-This guide covers how to distribute the app for the first time and how to send updates later.
-
----
-
-## PART 1: Initial Rollout (First Time Installation)
-Follow these steps to give the app to your students and teachers for the first time.
-
-### Step 1: Build the First APK
-1.  Open your **GitHub Repository** in your web browser.
-2.  Click the **Actions** tab.
-3.  On the left sidebar, click **"Build & Release APK"**.
-4.  Click **Run workflow ▼** > **Run workflow**.
-5.  Wait for the **Green Checkmark ✅** (about 5 minutes).
-
-### Step 2: Get the Download Link
-1.  Click the **Code** tab, then click **Releases** on the right side.
-2.  Click the latest version (e.g., `v1.0.0`).
-3.  Under **Assets**, **Right-click** on `app-release.apk` and select **Copy link address**.
-
-### Step 3: Distribute to Students
-Since the app is not on the Play Store, you can share it in two ways:
-*   **Option A (Direct Link):** Paste the link you copied into your class group chat (Messenger/GCash/etc.).
-*   **Option B (QR Code):** Go to a "URL to QR Code" website, paste the link, and print the QR code. Students can scan it to download the app directly.
-
-### Step 4: Student Installation Instructions
-Tell your students to follow these steps to install:
-1.  Download the APK file.
-2.  Open the file. If a security warning appears ("Blocked by Play Protect" or "Unknown Sources"), click **Settings**.
-3.  Turn **ON** "Allow from this source" or "Install unknown apps."
-4.  Go back and click **Install**.
+This guide will show you exactly how to get your app onto your classmates' phones and how to send them updates when you fix bugs. Follow these steps carefully.
 
 ---
 
-## PART 2: How to Release a New Update (Automated)
-Follow this guide whenever you fix a bug or add a feature and want to send an update to your users.
+## PART 1: The "First Time" Release (Getting the App to Students)
 
-### Step 1: Update the Version Number
-Android phones will **refuse** to install an update if the `versionCode` is not higher than the currently installed version.
+Follow these steps to generate your first download link.
 
-1.  Open Android Studio.
-2.  Open `build.gradle.kts (Module: :app)`.
-3.  In the `defaultConfig` block:
-    *   **Increment `versionCode`**: If it is `3`, change it to **`4`**.
-    *   **Update `versionName`**: Change `"1.0.0"` to `"1.0.1"`.
-4.  Click **"Sync Now"** at the top right.
+### Step 1: Start the Build on GitHub
+1.  Open your web browser and go to your **GitHub Repository** ([https://github.com/ciiiidung/AttendifyPlus-Auto](https://github.com/ciiiidung/AttendifyPlus-Auto)).
+2.  Click the **"Actions"** tab at the top of the page.
+3.  On the left-side menu, click **"Build & Release APK"**.
+4.  Look for a gray button that says **"Run workflow"** on the right side. Click it.
+5.  Click the green **"Run workflow"** button that appears.
+6.  Wait about 5 minutes. You will see a yellow circle turning. When it turns into a **Green Checkmark (✅)**, your app is ready!
 
-### Step 2: Save Your Changes to GitHub
-1.  Open the **Terminal** in Android Studio.
-2.  Run these commands:
+### Step 2: Get your Download Link
+1.  Go back to the main page of your repository (click the **"Code"** tab at the top left).
+2.  On the right side of the screen, look for the **"Releases"** section and click on the latest version (e.g., `v1.0.0`).
+3.  Scroll down to the bottom where it says **"Assets"**.
+4.  Find the file named `app-release.apk`.
+5.  **Right-click** on that name and select **"Copy link address"**. This is your download link!
+
+### Step 3: Give the Link to Students
+*   **Option 1:** Paste that link into your Messenger group chat. Students just have to click it to download.
+*   **Option 2:** Go to a website like `qr-code-generator.com`, paste the link, and print the QR code for students to scan.
+
+---
+
+## PART 2: How to Push a "New Update" (Fixing Bugs)
+
+Whenever you change code in Android Studio and want everyone to have the new version, follow these exact steps.
+
+### Step 1: Change the Version (Crucial!)
+Android phones will not install an update if the version is the same as before.
+1.  In Android Studio, open the file: `app` > `build.gradle.kts (Module :app)`.
+2.  Find the lines for `versionCode` and `versionName`.
+    *   **Increase `versionCode` by 1** (Example: If it was `1`, change it to `2`).
+    *   **Change `versionName`** (Example: Change `"1.0.0"` to `"1.0.1"`).
+3.  Click the **"Sync Now"** text that appears in the top right corner.
+
+### Step 2: Upload your Code to GitHub
+1.  At the bottom of Android Studio, click the **"Terminal"** tab.
+2.  Type these three commands one by one (press Enter after each):
 ```powershell
 git add .
-git commit -m "Description of your changes"
+git commit -m "I fixed the login bug"
 git push origin master
 ```
 
-### Step 3: Build the APK
-1.  Go to your GitHub **Actions** tab.
-2.  Run the **"Build & Release APK"** workflow again.
-3.  Wait for the **Green Checkmark ✅**.
+### Step 3: Trigger the New Build
+1.  Go back to your **GitHub Actions** tab in your browser.
+2.  Click **"Build & Release APK"** and click **"Run workflow"** again.
+3.  Wait for the **Green Checkmark (✅)**.
 
-### Step 4: Get the New Download Link
-1.  Go to **Releases** on GitHub.
-2.  Copy the link address of the new `app-release.apk`.
+### Step 4: Notify the Phones (Firebase)
+This step makes the "Update Available" pop-up appear on everyone's phones.
+1.  Go to the [Firebase Console](https://console.firebase.google.com/).
+2.  Click on your project, then click **Realtime Database** on the left.
+3.  Find the folder named **`config`**, then **`update`**.
+4.  Change these 4 values to match your new version:
+    *   **`versionCode`**: The new number you typed in Step 1 (e.g., `2`).
+    *   **`versionName`**: The new name (e.g., `1.0.1`).
+    *   **`downloadUrl`**: Copy the NEW link from the GitHub Releases page.
+    *   **`releaseNotes`**: Type a short message like "Fixed bugs and improved speed."
 
-### Step 5: Notify Users (Firebase)
-1.  Go to your **Firebase Console** > **Realtime Database**.
-2.  Go to `config` > `update`.
-3.  Update the **`versionCode`**, **`versionName`**, **`downloadUrl`**, and **`releaseNotes`**.
+---
 
-**Success!** The next time students open their app, they will see a pop-up asking them to update.
+## 💡 Pro-Tip for Installation
+When students install the APK for the first time, their phone might say "Blocked by Play Protect." Tell them to click **"Install Anyway"**. This happens because your app is a private project and not yet on the official Google Play Store.
