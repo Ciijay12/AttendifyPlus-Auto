@@ -24,8 +24,8 @@ android {
         applicationId = "com.aplus.attendance"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.0.2"
+        versionCode = 1
+        versionName = "1.0.0"
 
         javaCompileOptions {
             annotationProcessorOptions {
