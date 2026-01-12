@@ -84,6 +84,9 @@ class DashboardViewModel(
     // Update State
     private val _updateConfig = MutableStateFlow<AppUpdateConfig?>(null)
     val updateConfig: StateFlow<AppUpdateConfig?> = _updateConfig.asStateFlow()
+    
+    // Track if update was dismissed for this session
+    private var isUpdateDismissed = false
 
     private var loadJob: Job? = null
 
@@ -155,7 +158,7 @@ class DashboardViewModel(
     private fun checkForUpdates() {
         viewModelScope.launch {
             updateManager.getUpdateConfig().collect { config ->
-                if (config != null && updateManager.isUpdateAvailable(config)) {
+                if (config != null && updateManager.isUpdateAvailable(config) && !isUpdateDismissed) {
                     _updateConfig.value = config
                 } else {
                     _updateConfig.value = null
@@ -164,8 +167,15 @@ class DashboardViewModel(
         }
     }
     
+    fun dismissUpdate() {
+        isUpdateDismissed = true
+        _updateConfig.value = null
+    }
+    
     fun downloadUpdate(url: String) {
         updateManager.downloadAndInstall(url)
+        // Auto-dismiss after clicking update to prevent dialog staying on screen
+        _updateConfig.value = null
     }
 
     fun loadAdviserDetails(teacherId: String = "T001") {
