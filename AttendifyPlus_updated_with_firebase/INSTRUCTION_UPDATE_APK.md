@@ -9,7 +9,7 @@ This guide will show you exactly how to get your app onto your classmates' phone
 Follow these steps to generate your first download link.
 
 ### Step 1: Start the Build on GitHub
-1.  Open your web browser and go to your **GitHub Repository** ([https://github.com/ciiiidung/AttendifyPlus-Releases](https://github.com/ciiiidung/AttendifyPlus-Releases)).
+1.  Open your web browser and go to your **GitHub Repository** ([https://github.com/Ciijay12/AttendifyPlus-Auto](https://github.com/Ciijay12/AttendifyPlus-Auto)).
 2.  Click the **"Actions"** tab at the top of the page.
 3.  On the left-side menu, click **"Build & Release APK"**.
 4.  Look for a gray button that says **"Run workflow"** on the right side. Click it.
