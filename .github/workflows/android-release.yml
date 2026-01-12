@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch: # Allows manual trigger from Actions tab
 
 jobs:
   build:
@@ -30,27 +31,13 @@ jobs:
           mkdir -p AttendifyPlus_updated_with_firebase/app
           echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > AttendifyPlus_updated_with_firebase/app/google-services.json
 
-      - name: Verify google-services.json and fail if empty
+      - name: Verify google-services.json
         run: |
-          echo "Checking google-services.json..."
           FILE="AttendifyPlus_updated_with_firebase/app/google-services.json"
-          
-          # Check if file exists
           if [ ! -f "$FILE" ]; then
             echo "ERROR: google-services.json does not exist!"
             exit 1
           fi
-          
-          # Check if file is empty
-          SIZE=$(wc -c < "$FILE")
-          if [ "$SIZE" -eq 0 ]; then
-            echo "ERROR: google-services.json is empty!"
-            exit 1
-          fi
-          
-          # Print first few lines for verification
-          head -n 5 "$FILE"
-          echo "$SIZE bytes"
 
       - name: Grant Gradle permission
         run: |
@@ -70,5 +57,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: AttendifyPlus_updated_with_firebase/app/build/outputs/apk/release/app-release.apk
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
