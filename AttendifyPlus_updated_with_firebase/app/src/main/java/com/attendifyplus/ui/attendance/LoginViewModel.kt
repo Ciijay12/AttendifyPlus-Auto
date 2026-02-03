@@ -156,7 +156,7 @@ class LoginViewModel(
                 return@launch
             }
 
-            val teacher = teacherRepo.getByUsername(user)
+            val teacher = teacherRepo.getByUsername(user, forceRemote = true)
             if (teacher != null) {
                 if (teacher.password == pass) {
                     // BUG FIX: Force remote fetch to get latest credential status for teacher
