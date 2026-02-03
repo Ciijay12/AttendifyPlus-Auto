@@ -193,7 +193,7 @@ class LoginViewModel(
                         _loginState.value = LoginState.FirstTimeLogin("student", freshStudent.id)
                     } else {
                         saveSession("student", freshStudent.id)
-                        _login_state.value = LoginState.Success("student", freshStudent.id)
+                        _loginState.value = LoginState.Success("student", freshStudent.id)
                     }
                 } else {
                     _loginState.value = LoginState.Error("Invalid password")
