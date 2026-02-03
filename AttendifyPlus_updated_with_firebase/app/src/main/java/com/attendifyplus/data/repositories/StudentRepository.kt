@@ -69,9 +69,11 @@ class StudentRepository(private val dao: StudentDao) {
         return null
     }
 
-    suspend fun findByLogin(login: String): StudentEntity? {
-        val local = dao.findByLogin(login)
-        if (local != null) return local
+    suspend fun findByLogin(login: String, forceRemote: Boolean = false): StudentEntity? {
+        if (!forceRemote) {
+            val local = dao.findByLogin(login)
+            if (local != null) return local
+        }
 
         // Fallback to Firebase.
         
@@ -107,6 +109,10 @@ class StudentRepository(private val dao: StudentDao) {
             }
         } catch (e: Exception) {
             Timber.e(e, "Failed to find student by login (username search) from Firebase")
+        }
+
+        if (forceRemote) {
+            return dao.findByLogin(login)
         }
 
         return null

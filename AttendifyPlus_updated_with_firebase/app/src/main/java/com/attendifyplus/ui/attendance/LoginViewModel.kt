@@ -160,7 +160,7 @@ class LoginViewModel(
             if (teacher != null) {
                 if (teacher.password == pass) {
                     // BUG FIX: Force remote fetch to get latest credential status for teacher
-                    val freshTeacher = teacherRepo.getById(teacher.id, forceRemote = true) ?: teacher
+                    val freshTeacher = teacherRepo.getById(teacher..id, forceRemote = true) ?: teacher
 
                     if (!freshTeacher.hasChangedCredentials) {
                         _loginState.value = LoginState.FirstTimeLogin("teacher", freshTeacher.id)
@@ -181,7 +181,7 @@ class LoginViewModel(
         viewModelScope.launch {
             _loginState.value = LoginState.Loading
             
-            val student = studentRepo.findByLogin(user)
+            val student = studentRepo.findByLogin(user, forceRemote = true)
 
             if (student != null) {
                 val storedPass = student.password ?: "123456"
