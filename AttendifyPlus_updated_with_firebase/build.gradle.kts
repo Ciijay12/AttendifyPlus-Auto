@@ -2,9 +2,10 @@
 
 // Temporary comment to force re-sync
 plugins {
-    id("com.android.application") version "8.13.1" apply false
-    id("com.android.library") version "8.13.1" apply false
-    id("org.jetbrains.kotlin.android") version "1.9.24" apply false
-    id("org.jetbrains.kotlin.kapt") version "1.9.24" apply false
+    id("com.android.application") version "9.0.0" apply false
+    id("com.android.library") version "9.0.0" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.10" apply false
+    id("org.jetbrains.kotlin.kapt") version "2.2.10" apply false
     id("com.google.gms.google-services") version "4.4.0" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10" apply false
 }
