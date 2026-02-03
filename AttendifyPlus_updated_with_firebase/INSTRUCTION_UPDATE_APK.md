@@ -39,31 +39,54 @@ Android phones will not install an update if the version is the same as before.
 1.  In Android Studio, open the file: `app` > `build.gradle.kts (Module :app)`.
 2.  Find the lines for `versionCode` and `versionName`.
     *   **Increase `versionCode` by 1** (Example: If it was `6`, change it to `7`).
-    *   **Change `versionName`** (Example: Change `"1.0.4"` to `"1.0.5"`).
+    *   **Change `versionName`** (Example: Change `"1.0.5"` to `"1.0.6"`).
 3.  Click the **"Sync Now"** text that appears in the top right corner.
 
-### Step 2: Upload your Code to GitHub (The Easy Way)
-Instead of using the terminal, let's use Android Studio's simple interface.
-1.  Go to the **"Commit"** tab on the left side of Android Studio. If you don't see it, go to **View > Tool Windows > Commit**.
-2.  You will see a list of all the files you've changed.
-3.  In the **"Commit Message"** box, type a short description of what you fixed (e.g., "Fixed teacher login bug").
-4.  Click the **"Commit and Push..."** button.
-5.  A new window will appear. Just click **"Push"**. This sends your code changes to GitHub.
+### Step 2: Upload your Code to GitHub (Using the Terminal)
+1.  At the bottom of Android Studio, click the **"Terminal"** tab to open the command line.
+2.  Type the following command and press Enter. This prepares all your changed files to be saved.
+    ```powershell
+    git add .
+    ```
+3.  Next, type this command and press Enter. This saves a snapshot of your changes to your computer. **Replace the message in quotes with a real description of your fix.**
+    ```powershell
+    git commit -m "Fix: Corrected version code to fix update loop"
+    ```
+4.  Finally, type this command and press Enter. This uploads your saved changes to GitHub.
+    ```powershell
+    git push
+    ```
+
+> **What if I only `commit` but don't `push`?**
+> No problem. Your work is saved locally. Just type `git push` in the terminal to upload it. You can also go to the **Git > Push...** menu at the top of Android Studio.
 
 ### Step 3: Trigger the New Release
-This is what actually builds the new APK file on GitHub.
-1. Go to your **GitHub Repository** in your web browser.
-2. Click the **"Actions"** tab.
-3. Click **"Build & Release APK"** on the left.
-4. Click the **"Run workflow"** button and then the green **"Run workflow"** button to confirm. 
-5. Wait for the green checkmark (✅), just like in Part 1.
+This is what actually builds the new APK file on GitHub. The action is triggered by pushing a new version "tag".
+
+1.  In the same terminal window, type the following command, making sure the version matches what you put in `build.gradle.kts`. Press Enter.
+    ```powershell
+    git tag v1.0.6
+    ```
+2.  Now, push that tag to GitHub. This will automatically start the "Build & Release APK" action.
+    ```powershell
+    git push origin v1.0.6
+    ```
+3.  You can go to the **"Actions"** tab on GitHub to watch for the green checkmark (✅).
+
+> **Error: "tag already exists"?**
+> If you get this error, it means you used that tag name before. Run these two commands to delete the old tag from your computer and from GitHub, then try Step 3 again.
+> ```powershell
+> git tag -d v1.0.6
+> git push --delete origin v1.0.6
+> ```
+> *(Remember to replace `v1.0.6` with the correct version!)*
 
 ### Step 4: Notify the Phones (The Firebase Part)
 This step makes the "Update Required" pop-up appear on everyone's phones. **You must do this after the new APK is built and released on GitHub.**
 
 1.  **Get the New Download Link:**
     *   Go to your GitHub repository's main page.
-    *   Click on the new version in the **"Releases"** section (e.g., `v1.0.5`).
+    *   Click on the new version in the **"Releases"** section (e.g., `v1.0.6`).
     *   Scroll down to **Assets**, right-click `app-release.apk`, and **"Copy link address"**.
 
 2.  **Create or Update the Firebase Node:**
@@ -71,10 +94,10 @@ This step makes the "Update Required" pop-up appear on everyone's phones. **You 
     *   Hover your mouse over the line that says **`config`**. A **plus icon (`+`)** will appear on the right. Click it.
     *   In the `Key` box, type **`update`**. Leave the `Value` box empty and click the larger **plus icon (`+`)** next to it to create an object.
     *   Now, add the following key-value pairs inside the `update` object:
-        *   **`versionCode`**: The new number from Step 1 (e.g., `7`). **This MUST be higher than the previous version!**
-        *   **`versionName`**: The new version name (e.g., `"1.0.5"`).
+        *   **`versionCode`**: The new number from Step 1 (e.g., `7`). **This MUST be higher than or equal to the app's current version!**
+        *   **`versionName`**: The new version name (e.g., `"1.0.6"`).
         *   **`downloadUrl`**: Paste the new APK link you just copied from GitHub.
-        *   **`releaseNotes`**: Type a short message like "Fixed a bug where new teachers couldn't log in."
+        *   **`releaseNotes`**: Type a short message like "Fixes the stuck update notification."
     *   Click the **"Add"** button.
 
 Your app will now notify all users to download the update.
