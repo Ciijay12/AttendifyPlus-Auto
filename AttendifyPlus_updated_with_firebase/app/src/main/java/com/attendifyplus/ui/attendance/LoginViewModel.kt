@@ -160,7 +160,7 @@ class LoginViewModel(
             if (teacher != null) {
                 if (teacher.password == pass) {
                     // BUG FIX: Force remote fetch to get latest credential status for teacher
-                    val freshTeacher = teacherRepo.getById(teacher..id, forceRemote = true) ?: teacher
+                    val freshTeacher = teacherRepo.getById(teacher.id, forceRemote = true) ?: teacher
 
                     if (!freshTeacher.hasChangedCredentials) {
                         _loginState.value = LoginState.FirstTimeLogin("teacher", freshTeacher.id)
@@ -193,7 +193,7 @@ class LoginViewModel(
                         _loginState.value = LoginState.FirstTimeLogin("student", freshStudent.id)
                     } else {
                         saveSession("student", freshStudent.id)
-                        _loginState.value = LoginState.Success("student", freshStudent.id)
+                        _login_state.value = LoginState.Success("student", freshStudent.id)
                     }
                 } else {
                     _loginState.value = LoginState.Error("Invalid password")
