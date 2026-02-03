@@ -6,6 +6,7 @@ import com.attendifyplus.data.local.AttendifyDatabase
 import com.attendifyplus.data.repositories.*
 import com.attendifyplus.ui.attendance.*
 import com.attendifyplus.ui.settings.DebugSettingsViewModel
+import com.attendifyplus.ui.update.UpdateViewModel
 import com.attendifyplus.util.NotificationHelper
 import com.attendifyplus.util.UpdateManager
 import org.koin.android.ext.koin.androidContext
@@ -91,4 +92,7 @@ val appModule = module {
     
     // Debug Settings
     viewModel { DebugSettingsViewModel(get()) }
+
+    // Update ViewModel
+    viewModel { UpdateViewModel() }
 }

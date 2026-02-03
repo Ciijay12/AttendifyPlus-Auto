@@ -5,6 +5,7 @@ import com.attendifyplus.data.local.entities.SchoolPeriodEntity
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
 
@@ -12,12 +13,14 @@ class SchoolPeriodRepository(private val dao: SchoolPeriodDao) {
     
     private val dbRef = FirebaseDatabase.getInstance().getReference("config/schoolPeriod")
 
-    val periodFlow: Flow<SchoolPeriodEntity?> = dao.getPeriodFlow().map { period ->
-        period?.apply {
-            currentPeriod = determineCurrentPeriod()
+    val periodFlow: Flow<SchoolPeriodEntity?> = dao.getPeriodFlow()
+        .onStart { syncPeriod() } // Sync before emitting
+        .map { period ->
+            period?.apply {
+                currentPeriod = determineCurrentPeriod()
+            }
         }
-    }
-    
+
     suspend fun getPeriod(): SchoolPeriodEntity? {
         val period = dao.getPeriod()
         period?.apply {

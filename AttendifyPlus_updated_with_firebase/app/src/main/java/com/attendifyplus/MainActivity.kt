@@ -36,8 +36,9 @@ import androidx.work.WorkManager
 import com.attendifyplus.sync.SyncWorker
 import com.attendifyplus.ui.attendance.NavHostContainer
 import com.attendifyplus.ui.theme.AttendifyTheme
-import timber.log.Timber
+import com.attendifyplus.ui.update.UpdateScreen
 import kotlinx.coroutines.delay
+import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
 
@@ -54,9 +55,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         
-        // We set this to true initially to keep the system splash visible
-        // However, since we made the system splash "invisible" (transparent icon on white bg),
-        // we want to dismiss it AS FAST AS POSSIBLE so our Custom Compose Splash takes over.
         var isSystemSplashVisible = true
         splashScreen.setKeepOnScreenCondition { isSystemSplashVisible }
 
@@ -68,7 +66,6 @@ class MainActivity : ComponentActivity() {
 
         askNotificationPermission()
         
-        // Robust Sync on App Entry
         triggerForcedSync("app_entry_sync")
 
         setContent {
@@ -76,11 +73,8 @@ class MainActivity : ComponentActivity() {
                 var showCustomSplash by remember { mutableStateOf(true) }
 
                 LaunchedEffect(Unit) {
-                    // Immediately dismiss the system splash screen
-                    // This allows our CustomSplashScreen to render instantly.
                     isSystemSplashVisible = false
                     
-                    // Show our custom splash for 2.5 seconds
                     delay(2500)
                     showCustomSplash = false
                 }
@@ -88,6 +82,8 @@ class MainActivity : ComponentActivity() {
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (!showCustomSplash) {
                         NavHostContainer()
+                        // This composable will check for updates and show a dialog if needed
+                        UpdateScreen()
                     }
 
                     AnimatedVisibility(
@@ -103,7 +99,6 @@ class MainActivity : ComponentActivity() {
     
     override fun onStop() {
         super.onStop()
-        // Robust Sync on App Exit / Background
         triggerForcedSync("app_exit_sync")
     }
 
@@ -126,9 +121,6 @@ class MainActivity : ComponentActivity() {
             .addTag(tag)
             .build()
 
-        // Use Unique Work with KEEP to ensure we don't spam if already running, 
-        // but ensure at least one runs when entering/exiting.
-        // For exiting, we might want REPLACE to ensure it really tries, but KEEP is safer for data integrity.
         WorkManager.getInstance(applicationContext).enqueueUniqueWork(
             "global_app_sync",
             ExistingWorkPolicy.KEEP,
@@ -150,16 +142,13 @@ fun CustomSplashScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Main Logo - Use the original PNG resource.
-            // Compose's Image composable with ContentScale.Fit ensures the entire logo is visible 
-            // without being cropped, regardless of the container size.
             Image(
                 painter = painterResource(id = R.drawable.logo_playstore),
                 contentDescription = "Logo",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(150.dp) // Adjusted size for better visibility
-                    .padding(16.dp) // Add padding to give it some breathing room
+                    .size(150.dp)
+                    .padding(16.dp)
             )
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -173,7 +162,6 @@ fun CustomSplashScreen() {
             )
         }
 
-        // Footer Section
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
